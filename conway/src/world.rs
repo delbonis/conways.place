@@ -2,9 +2,9 @@
 
 #[derive(Copy, Clone, Debug)]
 pub struct Tile {
-    live: bool,
-    last_update: u64,
-    data: u32
+    pub live: bool,
+    pub last_update: u64,
+    pub data: u32
 }
 
 impl Tile {
@@ -24,6 +24,7 @@ impl Tile {
     }
 }
 
+#[derive(Clone)]
 pub struct World {
     cells: Vec<Tile>,
     dimensions: (usize, usize),
@@ -43,6 +44,13 @@ impl World {
     pub fn cell_at(&self, pos: (usize, usize)) -> Option<&Tile> {
         match cartesean_to_index(self.dimensions, pos) {
             Some(i) => Some(&self.cells[i]),
+            None => None
+        }
+    }
+
+    pub fn cell_at_mut(&mut self, pos: (usize, usize)) -> Option<&mut Tile> {
+        match cartesean_to_index(self.dimensions, pos) {
+            Some(i) => Some(&mut self.cells[i]),
             None => None
         }
     }
