@@ -1,6 +1,8 @@
 #![allow(unused)]
 
 use std::fmt::{self, Display, Formatter};
+use std::iter::*;
+use std::ops::Range;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Tile {
@@ -81,52 +83,62 @@ impl World {
         }
     }
 
-    fn neighbors_to(&self, (x, y): (usize, usize)) -> u8 {
-        let mut n = 0;
-        for i in 0..2 { // 0..2 because usize
-            for j in 0..2 { // same
-                if i == 1 && j == 1 { // if it's on (x, y)
-                    match self.cell_at((x + i - 1, y + j - 1)) {
-                        Some(t) => if t.live { n += 1 },
-                        None => {} // nothing counts as 0
-                    }
-                }
+    fn neighbors_to(&self, (x, y): (usize, usize)) -> Vec<&Tile> {
+
+        let mut ns = Vec::new();
+        let diffs = vec![
+            (-1, -1),
+            (0, -1),
+            (1, -1),
+            (-1, 0),
+            (1, 0),
+            (-1, 1),
+            (0, 1),
+            (1, 1)
+        ]; // TODO Move these somewhere nicer.
+
+        for (dx, dy) in diffs {
+            match self.cell_at(((x as isize + dx) as usize, (y as isize + dy) as usize)) {
+                Some(c) => ns.push(c),
+                None => {} // nothing, just continue
             }
         }
-        n
+
+        return ns;
+
     }
 
     pub fn step(&self) -> World {
 
-        let mut w = World {
-            cells: vec![Tile::new_empty(); self.dimensions.0 * self.dimensions.1],
+        // First compute the state of each of the tiles.
+        let next_tiles: Vec<Tile> = (0..self.cells.len()).into_iter()
+            .map(|i| (index_to_cartesean(self.dimensions, i).unwrap(), &self.cells[i])) // We don't start with any index that is out of bounds, so we should be fine.
+            .map(|(p, s)| compute_tile_next_step(
+                self.neighbors_to(p).into_iter()
+                    .filter(|t| t.live)
+                    .collect(),
+                s,
+                self.tick + 1))
+            .collect();
+
+        // Then actually assemble the new world.
+        World {
+            cells: next_tiles,
             dimensions: self.dimensions,
             tick: self.tick + 1
-        };
-
-        for i in 0..self.dimensions.0 {
-            for j in 0..self.dimensions.1 {
-                let at = self.cell_at((i, j)).unwrap();
-                let state = match (self.neighbors_to((i, j)), at.live) {
-                    (n, true) if n > 3 => false,
-                    (2, true) => true,
-                    (3, true) => true,
-                    (n, true) if n < 2 => false,
-                    (3, false) => true,
-                    (_, _) => false // else, just kill yourself I guess?
-                };
-                let wi = cartesean_to_index(self.dimensions, (i, j)).unwrap();
-                w.cells[wi].live = state;
-                if state != at.live {
-                    w.cells[wi].last_update = w.tick
-                }
-            }
         }
-
-        w
 
     }
 
+}
+
+fn compute_tile_next_step(adjacents: Vec<&Tile>, subject: &Tile, tick_for: u64) -> Tile {
+    let will_live = adjacents.len() == 3 || (subject.live && adjacents.len() == 2);
+    Tile {
+        live: will_live,
+        last_update: if will_live != subject.live { tick_for } else { subject.last_update },
+        data: 0 // TODO Implement this.
+    }
 }
 
 #[inline]

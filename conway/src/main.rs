@@ -30,17 +30,22 @@ fn main() {
     let w = file_to_world(fs::File::open(src_file_str).unwrap()).unwrap();
     let steps: u16 = steps_str.parse().unwrap();
 
+    println!("in:\n{}", &w);
     let system = System::new("live");
     let addr: Addr<Unsync, _> = sim::WorldSim::with_world("world".into(), w).start();
-    let res = addr.send(sim::MsgRunForTicks::new(steps));
-    Arbiter::handle().spawn(
-        res.map(|r| {
-            println!("{}", r.world())
-        })
-        .map_err(|e| {
-            println!("Fatal Error: {}", e)
-        })
-    );
+
+    for _ in 0..steps {
+        let res = addr.send(sim::MsgRunForTicks::new(1));
+        Arbiter::handle().spawn(
+            res.map(|r| {
+                println!("{}", r.world())
+            })
+            .map_err(|e| {
+                println!("Fatal Error: {}", e)
+            })
+        );
+    }
+
     system.run();
 }
 
@@ -62,6 +67,7 @@ fn file_to_world(mut f: fs::File) -> Result<world::World, io::Error> {
         .filter(|c| *c != 0xA)
         .map(|c| match c {
             0x20 => false,
+            0x2e => false,
             _ => true
         })
         .collect();
