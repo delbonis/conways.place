@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use actix::prelude::*;
 use actix::dev::*;
 
@@ -9,12 +11,21 @@ pub struct WorldSim {
 }
 
 impl WorldSim {
+
     pub fn new(name: String, dim: (usize, usize)) -> WorldSim {
         WorldSim {
             name: name,
             w: world::World::new(dim)
         }
     }
+
+    pub fn with_world(name: String, w: world::World) -> WorldSim {
+        WorldSim {
+            name: name,
+            w: w
+        }
+    }
+
 }
 
 impl Actor for WorldSim {
@@ -22,6 +33,12 @@ impl Actor for WorldSim {
 }
 
 pub struct WorldResponse(world::World);
+
+impl WorldResponse {
+    pub fn world(&self) -> &world::World {
+        &self.0
+    }
+}
 
 impl<A, M> MessageResponse<A, M> for WorldResponse
 where
@@ -50,11 +67,11 @@ impl Message for MsgRunForTicks {
 
 impl Handler<MsgRunForTicks> for WorldSim {
     type Result = WorldResponse;
-    fn handle(&mut self, msg: MsgRunForTicks, ctx: &mut Context<Self>) -> Self::Result {
+    fn handle(&mut self, msg: MsgRunForTicks, _ctx: &mut Context<Self>) -> Self::Result {
 
         println!("Requested {} ticks for world {}", msg.0, self.name);
 
-        for t in 0..msg.0 {
+        for _ in 0..msg.0 {
             self.w = self.w.step();
         }
 
@@ -72,7 +89,7 @@ impl Message for MsgSetTileState {
 
 impl Handler<MsgSetTileState> for WorldSim {
     type Result = WorldResponse;
-    fn handle(&mut self, msg: MsgSetTileState, ctx: &mut Context<Self>) -> Self::Result {
+    fn handle(&mut self, msg: MsgSetTileState, _ctx: &mut Context<Self>) -> Self::Result {
         println!("Setting tile ({}, {}) to {}", msg .0 .0, msg .0 .1, msg.1);
         match self.w.cell_at_mut(msg.0) {
             Some(t) => t.live = msg.1,

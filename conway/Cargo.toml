@@ -6,3 +6,8 @@ authors = ["treyzania <treyzania@gmail.com>"]
 [dependencies]
 actix = "0.5"
 futures = "0.1"
+clap = "2.27.*"
+
+[[bin]]
+name = "conwayserver"
+path = "src/main.rs"

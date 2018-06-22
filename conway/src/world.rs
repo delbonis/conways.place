@@ -1,5 +1,7 @@
 #![allow(unused)]
 
+use std::fmt::{self, Display, Formatter};
+
 #[derive(Copy, Clone, Debug)]
 pub struct Tile {
     pub live: bool,
@@ -22,6 +24,13 @@ impl Tile {
             data: 0
         }
     }
+    pub fn new_with_state(living: bool) -> Tile {
+        Tile {
+            live: if living { true } else { false },
+            last_update: 0,
+            data: 0
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -39,6 +48,23 @@ impl World {
             dimensions: (w, h),
             tick: 0
         }
+    }
+
+    pub fn from_bools((w, h): (usize, usize), tiles: Vec<bool>) -> Result<World, String> {
+
+        // Quickly error out of the length of the tiles doesn't make sense.
+        if tiles.len() != w * h {
+            return Err(String::from("len doesn't match dims"));
+        }
+
+        Ok(World {
+            cells: tiles.into_iter()
+                .map(Tile::new_with_state)
+                .collect(),
+            dimensions: (w, h),
+            tick: 0
+        })
+
     }
 
     pub fn cell_at(&self, pos: (usize, usize)) -> Option<&Tile> {
@@ -120,5 +146,56 @@ fn index_to_cartesean((w, h): (usize, usize), i: usize) -> Option<(usize, usize)
         let x = i % w;
         let y = i / w;
         Some((x, y))
+    }
+}
+
+impl Display for World {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        let world_box: String = vec!['='; self.dimensions.0].iter().collect();
+        f.write_str(world_box.as_ref());
+        f.write_str("\n");
+        for l in 0..self.dimensions.1 { // for each line
+            let mut s = String::new();
+            for c in 0..self.dimensions.0 {
+                match self.cell_at((c, l)) {
+                    Some(c) => s.push(if c.live { '#' } else { ' ' }),
+                    None => return Ok(()) // TODO Make this not suck.
+                }
+            }
+            s.push('\n');
+            f.write_str(s.as_str());
+        }
+        f.write_str(world_box.as_ref());
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn test_i2c_1() {
+        assert_eq!(Some((5, 0)), index_to_cartesean((20, 1), 5))
+    }
+
+    #[test]
+    fn test_c2i_1() {
+        assert_eq!(Some(7), cartesean_to_index((3, 5), (1, 2)))
+    }
+
+    #[test]
+    fn debug_world_deser() {
+
+        // This is a glider.  Run with --nocapture.
+        let tiles = vec![
+            false, false, false, false, false,
+            false, false,  true, false, false,
+            false, false, false,  true, false,
+            false,  true,  true,  true, false,
+            false, false, false, false, false
+        ];
+
+        println!("{}", World::from_bools((5, 5), tiles).unwrap());
+
     }
 }
