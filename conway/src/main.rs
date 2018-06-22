@@ -4,10 +4,12 @@ extern crate futures;
 
 use std::fs;
 use std::io::{self, Read};
+use std::thread;
+use std::time;
 
-use actix::prelude::*;
+//use actix::prelude::*;
 
-use futures::Future;
+//use futures::Future;
 
 mod sim;
 mod world;
@@ -20,33 +22,24 @@ fn main() {
         (about: "The Conway's Game of Life server for Game of Light.")
         (@arg state: "File to read state from.")
         (@arg steps: "Number of iterations to run.  Default: 1")
-        (@arg dest: "File to write final state to.  Default: stdout"))
+        //(@arg dest: "File to write final state to.  Default: stdout")
+        )
         .get_matches();
 
     let src_file_str = matches.value_of("state").unwrap();
     let steps_str = matches.value_of("steps").unwrap();
-    let _out_file_str = matches.value_of("dest").unwrap();
+    //let _out_file_str = matches.value_of("dest").unwrap();
 
-    let w = file_to_world(fs::File::open(src_file_str).unwrap()).unwrap();
+    let mut w = file_to_world(fs::File::open(src_file_str).unwrap()).unwrap();
     let steps: u16 = steps_str.parse().unwrap();
 
-    println!("in:\n{}", &w);
-    let system = System::new("live");
-    let addr: Addr<Unsync, _> = sim::WorldSim::with_world("world".into(), w).start();
-
+    println!("{}", w);
     for _ in 0..steps {
-        let res = addr.send(sim::MsgRunForTicks::new(1));
-        Arbiter::handle().spawn(
-            res.map(|r| {
-                println!("{}", r.world())
-            })
-            .map_err(|e| {
-                println!("Fatal Error: {}", e)
-            })
-        );
+        w = w.step();
+        println!("{}", w);
+        thread::sleep(time::Duration::from_millis(100));
     }
 
-    system.run();
 }
 
 fn file_to_world(mut f: fs::File) -> Result<world::World, io::Error> {
