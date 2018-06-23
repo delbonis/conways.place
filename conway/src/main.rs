@@ -1,3 +1,5 @@
+#![feature(test)]
+
 extern crate actix;
 extern crate futures;
 #[macro_use] extern crate clap;

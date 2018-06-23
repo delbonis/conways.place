@@ -181,7 +181,12 @@ impl Display for World {
 
 #[cfg(test)]
 mod test {
+
+    extern crate test;
+
+    use self::test::Bencher;
     use super::*;
+
     #[test]
     fn test_i2c_1() {
         assert_eq!(Some((5, 0)), index_to_cartesean((20, 1), 5))
@@ -207,4 +212,33 @@ mod test {
         println!("{}", World::from_bools((5, 5), tiles).unwrap());
 
     }
+
+    #[bench]
+    fn bench_step(b: &mut Bencher) {
+
+        let pat = [
+            false,
+            true,
+            false,
+            true,
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            true,
+            true,
+            false
+        ];
+
+        let wb = (0..1000000).into_iter()
+            .map(|i| pat[i % pat.len()])
+            .collect();
+
+        let mut w = World::from_bools((1000, 1000), wb).unwrap();
+        b.iter(|| { w = w.step() });
+
+    }
+
 }
