@@ -42,6 +42,17 @@ pub struct World {
     tick: u64
 }
 
+const NEIGHBOR_OFFSETS: [(isize, isize); 8] = [
+    (-1, -1),
+    (0, -1),
+    (1, -1),
+    (-1, 0),
+    (1, 0),
+    (-1, 1),
+    (0, 1),
+    (1, 1)
+];
+
 impl World {
 
     pub fn new((w, h): (usize, usize)) -> World {
@@ -83,36 +94,21 @@ impl World {
         }
     }
 
+    #[inline]
     fn neighbors_to(&self, (x, y): (usize, usize)) -> Vec<&Tile> {
-
-        let mut ns = Vec::new();
-        let diffs = vec![
-            (-1, -1),
-            (0, -1),
-            (1, -1),
-            (-1, 0),
-            (1, 0),
-            (-1, 1),
-            (0, 1),
-            (1, 1)
-        ]; // TODO Move these somewhere nicer.
-
-        for (dx, dy) in diffs {
-            match self.cell_at(((x as isize + dx) as usize, (y as isize + dy) as usize)) {
-                Some(c) => ns.push(c),
-                None => {} // nothing, just continue
-            }
-        }
-
-        return ns;
-
+        NEIGHBOR_OFFSETS.into_iter()
+            .map(|(dx, dy)| self.cell_at(((x as isize + dx) as usize, (y as isize + dy) as usize)))
+            .filter(Option::is_some)
+            .map(Option::unwrap)
+            .collect()
     }
 
     pub fn step(&self) -> World {
 
         // First compute the state of each of the tiles.
         let next_tiles: Vec<Tile> = (0..self.cells.len()).into_iter()
-            .map(|i| (index_to_cartesean(self.dimensions, i).unwrap(), &self.cells[i])) // We don't start with any index that is out of bounds, so we should be fine.
+            // The unwrap is fine because we never pass in an OOB thing.  Same for the index.
+            .map(|i| (index_to_cartesean(self.dimensions, i).unwrap(), &self.cells[i]))
             .map(|(p, s)| compute_tile_next_step(
                 self.neighbors_to(p).into_iter()
                     .filter(|t| t.live)
@@ -132,12 +128,13 @@ impl World {
 
 }
 
+#[inline]
 fn compute_tile_next_step(adjacents: Vec<&Tile>, subject: &Tile, tick_for: u64) -> Tile {
     let will_live = adjacents.len() == 3 || (subject.live && adjacents.len() == 2);
     Tile {
         live: will_live,
         last_update: if will_live != subject.live { tick_for } else { subject.last_update },
-        data: 0 // TODO Implement this.
+        data: if will_live { adjacents[tick_for as usize % adjacents.len()].data } else { 0 }
     }
 }
 
