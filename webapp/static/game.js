@@ -29,6 +29,11 @@ function init() {
 		targetZoom: DEFAULT_ZOOM
 	};
 
+	let ctr = document.getElementById("gamecontainer");
+	let game = document.getElementById("game");
+	game.width = ctr.clientWidth - 5;
+	game.height = ctr.clientHeight - 5;
+
 	updateDisplay();
 	window.requestAnimationFrame(runFrameUpdate)
 
