@@ -1,0 +1,17 @@
+html, body {
+	height: 100%;
+	margin: 0;
+}
+
+div.content {
+	border: 2px solid black;
+	height: 100%;
+	display: block;
+}
+
+.game {
+	width: 720;
+	height: 360;
+	margin: 5px;
+	border: 2px solid black;
+}
