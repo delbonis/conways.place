@@ -16,24 +16,40 @@ const DEFAULT_ZOOM = 10.0;
 const ZOOM_SPRINGYNESS = 3;
 const RENDER_CULL_BUFFER = 3;
 
-var cameraInfo = null;
+const CAM_MOVE_SPEED = 50;
+const CAM_ZOOM_MULT = 1.05;
+
+var cameraState = null;
+var cameraTarget = null;
 
 function init() {
 
 	console.log("hello!");
 
-	cameraInfo = {
-		camX: WORLD_WIDTH / 2,
-		camY: WORLD_HEIGHT / 2,
-		camZoom: DEFAULT_ZOOM / 20.0,
-		targetZoom: DEFAULT_ZOOM
+	// Set up camera.
+	cameraState = {
+		x: WORLD_WIDTH / 2,
+		y: WORLD_HEIGHT / 2,
+		zoom: DEFAULT_ZOOM / 20.0,
 	};
 
+	cameraTarget = {
+		x: WORLD_WIDTH / 2,
+		y: WORLD_HEIGHT / 2,
+		zoom: DEFAULT_ZOOM
+	};
+
+	// Set up game UI rendering.
 	let ctr = document.getElementById("gamecontainer");
 	let game = document.getElementById("game");
 	game.width = ctr.clientWidth - 5;
 	game.height = ctr.clientHeight - 5;
 
+	// Controls
+	// FIXME This acts as if the player is typing.  It's not a smooth flow.
+	window.onkeydown = handleKeyDown;
+
+	// Start render procedures.
 	updateDisplay();
 	window.requestAnimationFrame(runFrameUpdate)
 
@@ -42,6 +58,23 @@ function init() {
 
 	console.log("setup finished!");
 
+}
+
+function handleKeyDown(e) {
+	var k = e.key.toLowerCase();
+	if (k == 'a') {
+		cameraTarget.x -= CAM_MOVE_SPEED / cameraState.zoom;
+	} else if (k == 'd') {
+		cameraTarget.x += CAM_MOVE_SPEED / cameraState.zoom;
+	} else if (k == 'w') {
+		cameraTarget.y -= CAM_MOVE_SPEED / cameraState.zoom;
+	} else if (k == 's') {
+		cameraTarget.y += CAM_MOVE_SPEED / cameraState.zoom;
+	} else if (k == 'e') {
+		cameraTarget.zoom *= CAM_ZOOM_MULT;
+	} else if (k == 'r') {
+		cameraTarget.zoom /= CAM_ZOOM_MULT;
+	}
 }
 
 function getWorldState() {
@@ -89,20 +122,20 @@ function getNewFrame(worldState, cam, windowWidth, windowHeight) {
 	let ctx = canvas.getContext("2d");
 
 	// Figure out how much we have to render around us.
-	let frameRenderedTilesHoriz = (windowWidth / 2) / cam.camZoom + RENDER_CULL_BUFFER;
-	let frameRenderedTilesVert = (windowHeight / 2) / cam.camZoom + RENDER_CULL_BUFFER;
+	let frameRenderedTilesHoriz = (windowWidth / 2) / cam.zoom + RENDER_CULL_BUFFER;
+	let frameRenderedTilesVert = (windowHeight / 2) / cam.zoom + RENDER_CULL_BUFFER;
 	//console.log("horiz buf: " + frameRenderedTilesHoriz + " vert buf: " + frameRenderedTilesVert);
 
 	// Figure out what the actual mins and maxes are for the viewport.
-	let minRenderX = cam.camX - frameRenderedTilesHoriz;
-	let maxRenderX = cam.camX + frameRenderedTilesHoriz;
-	let minRenderY = cam.camY - frameRenderedTilesVert;
-	let maxRenderY = cam.camY + frameRenderedTilesVert;
+	let minRenderX = cam.x - frameRenderedTilesHoriz;
+	let maxRenderX = cam.x + frameRenderedTilesHoriz;
+	let minRenderY = cam.y - frameRenderedTilesVert;
+	let maxRenderY = cam.y + frameRenderedTilesVert;
 	//console.log("rxmin: " + minRenderX + " rxmax: " + maxRenderX + " rymin: " + minRenderY + " rymax: " + maxRenderY);
 
 	// Now camera screen space calculations.
-	let xMin = cam.camX * cam.camZoom - (windowWidth / 2);
-	let yMin = cam.camY * cam.camZoom - (windowHeight / 2);
+	let xMin = cam.x * cam.zoom - (windowWidth / 2);
+	let yMin = cam.y * cam.zoom - (windowHeight / 2);
 	//console.log("camxmin: " + xMin + " camymin: " + yMin);
 
 	// Actually render each tile.
@@ -118,13 +151,13 @@ function getNewFrame(worldState, cam, windowWidth, windowHeight) {
 
 		if (tx >= minRenderX && tx <= maxRenderX && ty >= minRenderY && ty <= maxRenderY) {
 
-			let tileRenderX = (tx * cam.camZoom) - xMin;
-			let tileRenderY = (ty * cam.camZoom) - yMin;
+			let tileRenderX = (tx * cam.zoom) - xMin;
+			let tileRenderY = (ty * cam.zoom) - yMin;
 
 			//console.log("tile renderx: " + tileRenderX + " rendery: " + tileRenderY);
 
 			ctx.fillStyle = "#000000";
-			ctx.fillRect(tileRenderX, tileRenderY, cam.camZoom, cam.camZoom);
+			ctx.fillRect(tileRenderX, tileRenderY, cam.zoom, cam.zoom);
 
 		}
 	});
@@ -136,7 +169,7 @@ function getNewFrame(worldState, cam, windowWidth, windowHeight) {
 function updateDisplay() {
 
 	let out = document.getElementById("game");
-	let frame = getNewFrame(getWorldState(), cameraInfo, out.width, out.height);
+	let frame = getNewFrame(getWorldState(), cameraState, out.width, out.height);
 
 	let ctx = out.getContext("2d");
 	ctx.fillStyle = "#ffffff";
@@ -172,8 +205,13 @@ function runFrameUpdate(time) {
 	if (frames > 2) {
 
 		// Calculate the new position of the camera.
-		let nextZoom = lerp(cameraInfo.camZoom, cameraInfo.targetZoom, (1.0 / fps) * ZOOM_SPRINGYNESS);
-		cameraInfo.camZoom = nextZoom;
+		var nextCam = {};
+		for (var p in cameraTarget) {
+			nextCam[p] = lerp(cameraState[p], cameraTarget[p], (1.0 / fps) * ZOOM_SPRINGYNESS);
+		}
+
+		// Replace the camera state with the new one.
+		cameraState = nextCam;
 
 	}
 
