@@ -28,7 +28,7 @@ impl Tile {
     }
     pub fn new_with_state(living: bool) -> Tile {
         Tile {
-            live: if living { true } else { false },
+            live: living,
             last_update: 0,
             data: 0
         }

@@ -1,0 +1,15 @@
+[package]
+name = "gameoflightinst"
+version = "0.1.0"
+authors = ["treyzania <treyzania@gmail.com>"]
+
+[dependencies]
+clap = "2.27.*"
+rocket = "0.3.14"
+rocket_codegen = "0.3.14"
+websocket = "0.20.2"
+conway = { path = "../conway" }
+
+[[bin]]
+name = "gameoflightinst"
+path = "src/main.rs"

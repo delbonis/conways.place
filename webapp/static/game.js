@@ -54,10 +54,27 @@ function init() {
 	window.requestAnimationFrame(runFrameUpdate)
 
 	// TODO Set up world.
-	// TODO Connect to the server.
+
+	// Set up connection.
+	//let socketPort = window.location.port != 80 ? ":" + window.location.port : "";
+	//let socketUrl = "ws://" + window.location.hostname + socketPort + "/socket";
+	let socketUrl = "ws://localhost:8802/";
+	let socket = new WebSocket(socketUrl, "gameoflight");
+
+	socket.onopen = function(e) { handleSocketOpen(socket, e); };
+	socket.onmessage = function(e) { handleSocketMessage(socket, e); };
 
 	console.log("setup finished!");
 
+}
+
+function handleSocketOpen(sock, e) {
+	console.log("Connected!");
+}
+
+function handleSocketMessage(sock, e) {
+	console.log("msg: " + e.data);
+	let msg = JSON.parse(e.data);
 }
 
 function handleKeyDown(e) {

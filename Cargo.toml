@@ -1,5 +1,5 @@
 [workspace]
 members = [
-	"conway"
+	"conway",
+	"webapp"
 ]
-
