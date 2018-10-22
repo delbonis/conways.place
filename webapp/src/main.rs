@@ -1,4 +1,4 @@
-#![allow(unused)]
+#[allow(unused)]
 
 #[macro_use] extern crate clap;
 extern crate conway;
@@ -6,72 +6,129 @@ extern crate websocket;
 extern crate serde;
 #[macro_use] extern crate serde_derive;
 extern crate serde_json;
+extern crate tokio_core;
+extern crate tokio_channel;
+extern crate futures;
 
+use std::fmt::Debug;
 use std::iter::*;
-
-use std::net::{SocketAddr, TcpListener, TcpStream, ToSocketAddrs};
-use std::path::{Path, PathBuf};
 use std::thread;
+use std::sync::*;
 
-use websocket::OwnedMessage;
-use websocket::server::upgrade::sync::Buffer;
-use websocket::server::upgrade::WsUpgrade;
-use websocket::server::{NoTlsAcceptor, WsServer};
-use websocket::sync::Server;
+use websocket::async::Server;
+use websocket::message::{Message, OwnedMessage};
+use websocket::server::InvalidConnection;
+
+use futures::{Future, Sink, Stream};
+use tokio_core::reactor::{Core, Handle};
 
 mod messages;
 mod session;
+
+const PROTO_NAME: &'static str = "gameoflight";
+
+/*
+ * Some of this was "borrowed" from:
+ * https://github.com/websockets-rs/rust-websocket/blob/master/examples/async-server.rs
+ */
 
 fn main() {
 
     let matches = clap_app!(gameoflightinst =>
         (version: "0.1.0")
         (author: "treyzania <treyzania@gmail.com>")
-        (about: "The Conway's Game of Life instance web server.")
-        (@arg wsport: --wp +takes_value "Port to host the websocket HTTP server on.  Default: 7908"))
+        (about: "The Conway's Game of Life instance game server.")
+        (@arg wsport: --wp +takes_value "Port to host the websocket server on.  Default: 7908"))
         .get_matches();
 
     let ws_port: u16 = matches.value_of("wsport").unwrap_or("7908").parse().unwrap();
 
-    let sock_addr = SocketAddr::new("0.0.0.0".parse().unwrap(), ws_port); // TODO Select port.
-    let server = Server::bind(sock_addr).unwrap();
+    let mut core = Core::new().unwrap();
+    let handle = core.handle();
+    let listener = Server::bind(format!("0.0.0.0:{}", ws_port).as_ref() as &str, &handle).unwrap();
+
+    // TODO
+    let st = Arc::new(Mutex::new(
+        GameState {
+            sessions: vec![]
+        }
+    ));
+
+    // This is where the actual game runs.
+    thread::spawn(|| game_sim_thread(st));
 
     println!("Websocket server listening on port {}", ws_port);
-    for request in server.filter_map(Result::ok) {
-        if !request.protocols().contains(&"gameoflight".to_string()) {
-            println!("not support for gol proto, go away");
-            request.reject().unwrap();
-            continue;
-        }
-        let mut client = request.use_protocol("gameoflight").accept().unwrap();
-        let ip = client.peer_addr().unwrap();
-        println!("Websocket connection from {}", ip);
+    let clients = listener
+		.incoming()
+		// we don't wanna save the stream if it drops
+		.map_err(|InvalidConnection { error, .. }| error)
+		.for_each(|(upgrade, addr)| {
+			println!("Got a connection from: {}", addr);
 
-        let message = OwnedMessage::Text("Hello".to_string());
-        client.send_message(&message).unwrap();
+			// check if it has the protocol we want
+			if !upgrade.protocols().iter().any(|s| s == PROTO_NAME) {
+				// reject it if it doesn't
+				spawn_future(upgrade.reject(), "frik off m8", &handle);
+				return Ok(());
+			}
 
-        let (mut receiver, mut sender) = client.split().unwrap();
-        for message in receiver.incoming_messages() {
-            if message.is_err() {
-                println!("whoops! {:?}", message.unwrap_err());
-                break;
-            }
+            // Make the new session?
+            let (_session, _recv) = session::Session::new();
 
-            let msg = message.unwrap();
-            match msg {
-                OwnedMessage::Close(_) => {
-                    let m = OwnedMessage::Close(None);
-                    sender.send_message(&m).unwrap();
-                    println!("Client {} disconnected", ip);
-                    continue;
-                },
-                OwnedMessage::Ping(ping) => {
-                    let m = OwnedMessage::Pong(ping);
-                    sender.send_message(&m).unwrap();
-                },
-                _ => sender.send_message(&msg).unwrap()
-            }
-        }
-    }
+			// accept the request to be a ws connection if it does
+			let f = upgrade
+				.use_protocol(PROTO_NAME)
+				.accept()
+				// send a greeting!
+				.and_then(|(s, _)| s.send(Message::text("Hello!").into()))
+				// simple echo server impl
+				.and_then(|s| {
+					let (sink, stream) = s.split();
+                    // TODO Add session to GameState
+					stream
+						.take_while(|m| Ok(!m.is_close()))
+						.filter_map(|m| {
+							println!("Action: {:?}", m);
+							match m {
+                                OwnedMessage::Text(t) => Some(OwnedMessage::Text(handle_str_packet(t))),
+								OwnedMessage::Ping(p) => Some(OwnedMessage::Pong(p)),
+                                OwnedMessage::Pong(_) => None,
+								_ => None,
+							}
+						})
+                        // TODO .select(recv.map(...)) here?
+                        .forward(sink)
+						.and_then(|(_, sink)| sink.send(OwnedMessage::Close(None)))
+                        // TODO After it's done then just remove it from the GameState.
+				});
 
+			spawn_future(f, "Client Status", &handle);
+			Ok(())
+		});
+
+    core.run(clients).unwrap();
+
+}
+
+struct GameState {
+    sessions: Vec<session::Session>
+}
+
+fn spawn_future<F, I, E>(f: F, desc: &'static str, handle: &Handle)
+where
+	F: Future<Item = I, Error = E> + 'static,
+	E: Debug,
+{
+	handle.spawn(
+		f.map_err(move |e| println!("{}: '{:?}'", desc, e))
+			.map(move |_| println!("{}: Finished.", desc)),
+	);
+}
+
+fn handle_str_packet(data: String) -> String {
+    data // TODO
+}
+
+fn game_sim_thread(_st: Arc<Mutex<GameState>>) {
+    // TODO
 }

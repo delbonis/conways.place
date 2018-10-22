@@ -9,11 +9,14 @@ conway = { path = "../conway" }
 serde = "^1.0"
 serde_derive = "1.0"
 serde_json = "1.0"
+tokio-core = "0.1"
+tokio-channel = "0.1"
+futures = "0.1"
 
 [dependencies.websocket]
 version = "0.20.2"
-default-features = false
-features = ["sync"]
+#default-features = false
+#features = ["sync"]
 
 [[bin]]
 name = "gameoflightinst"
