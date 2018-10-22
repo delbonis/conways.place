@@ -1,0 +1,25 @@
+version: '3'
+
+services:
+  frontend:
+    image: nginx:latest
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+    ports:
+      - "80:80"
+    networks:
+      golnet: {}
+  game:
+    build:
+      context: .
+      dockerfile: ./Dockerfile-webapp
+    networks:
+      golnet: {}
+
+networks:
+  golnet:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.0.0.0/24

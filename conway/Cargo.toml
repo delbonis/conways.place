@@ -11,3 +11,6 @@ clap = "2.27.*"
 [[bin]]
 name = "conwayserver"
 path = "src/main.rs"
+
+[lib]
+path = "src/lib.rs"

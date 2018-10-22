@@ -1,0 +1,23 @@
+FROM rustlang/rust:nightly-slim
+
+RUN apt-get update && apt-get -y install \
+	build-essential \
+	pkg-config \
+	openssl \
+	libssl-dev
+
+RUN mkdir -p /opt/gameoflight
+
+COPY Cargo.toml /opt/gameoflight
+COPY Cargo.lock /opt/gameoflight
+COPY conway /opt/gameoflight/conway
+COPY webapp /opt/gameoflight/webapp
+
+WORKDIR /opt/gameoflight
+
+RUN mkdir -p /opt/bins
+RUN cargo -Z unstable-options build --out-dir=/opt/bins --bin gameoflightinst
+
+EXPOSE 8802
+
+ENTRYPOINT ["/opt/bins/gameoflightinst"]
