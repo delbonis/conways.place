@@ -29,13 +29,15 @@ fn main() {
 
     let ws_port: u16 = matches.value_of("wsport").unwrap_or("8802").parse().unwrap();
 
-    let sock_addr = SocketAddr::from(([127, 0, 0, 1], ws_port));
+    let sock_addr = SocketAddr::new("0.0.0.0".parse().unwrap(), ws_port); // TODO Select port.
     let server = Server::bind(sock_addr).unwrap();
+
     println!("Websocket server listening on port {}", ws_port);
     for request in server.filter_map(Result::ok) {
         if !request.protocols().contains(&"gameoflight".to_string()) {
+            println!("not support for gol proto, go away");
             request.reject().unwrap();
-            return;
+            continue;
         }
         let mut client = request.use_protocol("gameoflight").accept().unwrap();
         let ip = client.peer_addr().unwrap();
@@ -52,7 +54,7 @@ fn main() {
                     let m = OwnedMessage::Close(None);
                     sender.send_message(&m).unwrap();
                     println!("Client {} disconnected", ip);
-                    return;
+                    continue;
                 },
                 OwnedMessage::Ping(ping) => {
                     let m = OwnedMessage::Pong(ping);
@@ -63,11 +65,4 @@ fn main() {
         }
     }
 
-}
-
-fn get_static_file_path(name: &str) -> PathBuf {
-    let mut buf = PathBuf::new();
-    buf.push("static");
-    buf.push(name);
-    buf
 }

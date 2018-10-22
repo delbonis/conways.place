@@ -5,16 +5,19 @@ services:
     image: nginx:latest
     volumes:
       - ./nginx:/etc/nginx/conf.d
+      - ./static:/mnt/golstatic
     ports:
       - "80:80"
     networks:
-      golnet: {}
+      golnet:
+        ipv4_address: 172.0.0.10
   game:
     build:
       context: .
       dockerfile: ./Dockerfile-webapp
     networks:
-      golnet: {}
+      golnet:
+        ipv4_address: 172.0.0.20
 
 networks:
   golnet:
