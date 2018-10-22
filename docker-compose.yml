@@ -15,6 +15,8 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile-webapp
+    expose:
+      - "7908"
     networks:
       golnet:
         ipv4_address: 172.0.0.20

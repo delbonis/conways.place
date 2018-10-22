@@ -1,7 +1,6 @@
 FROM rustlang/rust:nightly-slim
 
 RUN apt-get update && apt-get -y install \
-	build-essential \
 	pkg-config \
 	openssl \
 	libssl-dev
@@ -18,6 +17,6 @@ WORKDIR /opt/gameoflight
 RUN mkdir -p /opt/bins
 RUN cargo -Z unstable-options build --out-dir=/opt/bins --bin gameoflightinst
 
-EXPOSE 8802
+EXPOSE 7908
 
 ENTRYPOINT ["/opt/bins/gameoflightinst"]

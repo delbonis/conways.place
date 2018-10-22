@@ -5,8 +5,12 @@ authors = ["treyzania <treyzania@gmail.com>"]
 
 [dependencies]
 clap = "2.27.*"
-websocket = "0.20.2"
 conway = { path = "../conway" }
+
+[dependencies.websocket]
+version = "0.20.2"
+default-features = false
+features = ["sync"]
 
 [[bin]]
 name = "gameoflightinst"

@@ -24,10 +24,10 @@ fn main() {
         (version: "0.1.0")
         (author: "treyzania <treyzania@gmail.com>")
         (about: "The Conway's Game of Life instance web server.")
-        (@arg wsport: --wp +takes_value "Port to host the websocket HTTP server on.  Default: 8802"))
+        (@arg wsport: --wp +takes_value "Port to host the websocket HTTP server on.  Default: 7908"))
         .get_matches();
 
-    let ws_port: u16 = matches.value_of("wsport").unwrap_or("8802").parse().unwrap();
+    let ws_port: u16 = matches.value_of("wsport").unwrap_or("7908").parse().unwrap();
 
     let sock_addr = SocketAddr::new("0.0.0.0".parse().unwrap(), ws_port); // TODO Select port.
     let server = Server::bind(sock_addr).unwrap();
@@ -48,6 +48,11 @@ fn main() {
 
         let (mut receiver, mut sender) = client.split().unwrap();
         for message in receiver.incoming_messages() {
+            if message.is_err() {
+                println!("whoops! {:?}", message.unwrap_err());
+                break;
+            }
+
             let msg = message.unwrap();
             match msg {
                 OwnedMessage::Close(_) => {
