@@ -3,6 +3,8 @@
 extern crate actix;
 extern crate futures;
 #[macro_use] extern crate clap;
+extern crate serde;
+#[macro_use] extern crate serde_derive;
 
 use std::fs;
 use std::io::{self, Read};

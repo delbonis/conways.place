@@ -4,7 +4,7 @@ use std::fmt::{self, Display, Formatter};
 use std::iter::*;
 use std::ops::Range;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub struct Tile {
     pub live: bool,
     pub last_update: u64,
@@ -35,7 +35,7 @@ impl Tile {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct World {
     cells: Vec<Tile>,
     dimensions: (usize, usize),

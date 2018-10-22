@@ -56,16 +56,31 @@ function init() {
 	// TODO Set up world.
 
 	// Set up connection.
-	//let socketPort = window.location.port != 80 ? ":" + window.location.port : "";
-	//let socketUrl = "ws://" + window.location.hostname + socketPort + "/socket";
-	let socketUrl = "ws://localhost:8802/";
-	let socket = new WebSocket(socketUrl, "gameoflight");
+	let socket = new WebSocket(getSocketUrl(), "gameoflight");
 
 	socket.onopen = function(e) { handleSocketOpen(socket, e); };
 	socket.onmessage = function(e) { handleSocketMessage(socket, e); };
 
 	console.log("setup finished!");
 
+}
+
+function getSocketUrl() {
+	let proto = window.location.protocol;
+	if (proto == "file:") {
+		/*
+		 * We're running it directly, let's hope that the webapp server is
+		 * running too.  Normal users will never get here.  Don't worry, 7908
+		 * isn't exposed publicly on the server.
+		 */
+		return "ws://localhost:7908";
+	} else {
+		/*
+		 * We're running on a web server.  This looks more complicated but it's
+		 * really not.
+		 */
+		return "ws://" + window.location.hostname + (window.location.port ? ":" + window.location.port : "") + "/api";
+	}
 }
 
 function handleSocketOpen(sock, e) {

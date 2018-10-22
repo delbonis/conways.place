@@ -3,6 +3,9 @@
 #[macro_use] extern crate clap;
 extern crate conway;
 extern crate websocket;
+extern crate serde;
+#[macro_use] extern crate serde_derive;
+extern crate serde_json;
 
 use std::iter::*;
 
@@ -16,6 +19,7 @@ use websocket::server::upgrade::WsUpgrade;
 use websocket::server::{NoTlsAcceptor, WsServer};
 use websocket::sync::Server;
 
+mod messages;
 mod session;
 
 fn main() {
