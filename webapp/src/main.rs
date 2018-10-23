@@ -25,8 +25,11 @@ use websocket::server::InvalidConnection;
 use futures::{Future, Sink, Stream};
 use tokio_core::reactor::{Core, Handle};
 
+use conway::world;
+
 mod messages;
 mod session;
+mod gameloop;
 
 const PROTO_NAME: &'static str = "gameoflight";
 const GAME_TICK_MILLIS: u64 = 500;
@@ -53,16 +56,11 @@ fn main() {
     let listener = Server::bind(format!("0.0.0.0:{}", ws_port).as_ref() as &str, &handle).unwrap();
 
     // TODO
-    let st = Arc::new(Mutex::new(
-        GameState {
-            sessions: vec![],
-            world: conway::world::World::new((WORLD_SIZE, WORLD_SIZE))
-        }
-    ));
+    let st = Arc::new(Mutex::new(gameloop::GameState::new(world::World::new((WORLD_SIZE, WORLD_SIZE)))));
 
     // This is where the actual game runs.
     let wst = st.clone();
-    thread::spawn(move || game_sim_thread(wst));
+    thread::spawn(move || gameloop::game_sim_thread(wst));
 
     let next_sid = Arc::new(AtomicU64::new(0));
 
@@ -91,10 +89,11 @@ fn main() {
             // Clone the event look handle so we can spawn futures in the message handler(s).
             let hclone = handle.clone();
             let wref = st.clone();
+            let wref2 = st.clone();
 
             // Add the session to the table.
             {
-                let mut gs: MutexGuard<GameState> = wref.lock().unwrap();
+                let mut gs: MutexGuard<gameloop::GameState> = wref.lock().unwrap();
                 gs.sessions.push(session);
             }
 
@@ -111,7 +110,7 @@ fn main() {
 							println!("Action: {:?}", m);
                             let hc = hclone.clone();
 							match m {
-                                OwnedMessage::Text(t) => Some(OwnedMessage::Text(handle_str_packet(hc, t))),
+                                OwnedMessage::Text(t) => Some(OwnedMessage::Text(handle_str_packet(hc, t, wref2.clone()))), // idk why we have to clone this again
 								OwnedMessage::Ping(p) => Some(OwnedMessage::Pong(p)),
                                 OwnedMessage::Pong(_) => None,
 								_ => None,
@@ -121,7 +120,7 @@ fn main() {
                         .forward(sink)
 						.and_then(move |(_, sink)| {
                             // Remove the session from the table.
-                            let mut gs: MutexGuard<GameState> = wref.lock().unwrap();
+                            let mut gs: MutexGuard<gameloop::GameState> = wref.lock().unwrap();
                             gs.sessions = gs.sessions.iter() // TODO Make this better!
                                 .cloned()
                                 .filter(|i| i.id() != sid)
@@ -140,11 +139,6 @@ fn main() {
 
 }
 
-struct GameState {
-    sessions: Vec<session::Session>,
-    world: conway::world::World
-}
-
 fn spawn_future<F, I, E>(f: F, desc: &'static str, handle: &Handle)
 where
 	F: Future<Item = I, Error = E> + 'static,
@@ -156,10 +150,14 @@ where
 	);
 }
 
-fn handle_str_packet(handle: Handle, data: String) -> String {
-    data // TODO
-}
+fn handle_str_packet(handle: Handle, data: String, gs: Arc<Mutex<gameloop::GameState>>) -> String {
 
-fn game_sim_thread(_st: Arc<Mutex<GameState>>) {
-    // TODO
+    let nm = messages::NetMessage::from_string(&data);
+    if let Err(m) = nm {
+        return m; // TODO Make this better.
+    }
+
+    let res = gameloop::handle_message(nm.unwrap(), handle, gs);
+    res.to_string()
+
 }

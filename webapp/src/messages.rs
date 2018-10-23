@@ -13,6 +13,10 @@ impl NetMessage {
     pub fn to_string(&self) -> String {
         serde_json::to_string(self).unwrap()
     }
+
+    pub fn from_string(m: &String) -> Result<Self, String> { // FIXME Make errors smarter.
+        serde_json::from_str(m.as_ref()).map_err(|e| format!("{:?}", e))
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
