@@ -3,6 +3,7 @@
 use std::fmt::{self, Display, Formatter};
 use std::iter::*;
 use std::ops::Range;
+use std::time;
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub struct Tile {
@@ -35,7 +36,7 @@ impl Tile {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct World {
     cells: Vec<Tile>,
     dimensions: (usize, usize),
@@ -101,6 +102,11 @@ impl World {
             .filter(Option::is_some)
             .map(Option::unwrap)
             .collect()
+    }
+
+    pub fn set_tile_liveness(&mut self, pos: (usize, usize), live: bool) {
+        let i = cartesean_to_index(self.dimensions, pos).unwrap(); // FIXME
+        self.cells[i].live = live;
     }
 
     pub fn step(&self) -> World {

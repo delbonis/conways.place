@@ -55,12 +55,14 @@ fn main() {
     let handle = core.handle();
     let listener = Server::bind(format!("0.0.0.0:{}", ws_port).as_ref() as &str, &handle).unwrap();
 
-    // TODO
-    let st = Arc::new(Mutex::new(gameloop::GameState::new(world::World::new((WORLD_SIZE, WORLD_SIZE)))));
+    // Just create a new empty world.
+    let st = Arc::new(Mutex::new(
+        gameloop::GameState::new(world::World::new((WORLD_SIZE, WORLD_SIZE)))
+    ));
 
     // This is where the actual game runs.
-    let wst = st.clone();
-    thread::spawn(move || gameloop::game_sim_thread(wst));
+    let tst = st.clone();
+    thread::spawn(move || gameloop::game_sim_thread(tst));
 
     let next_sid = Arc::new(AtomicU64::new(0));
 
@@ -82,9 +84,6 @@ fn main() {
             // Make the new session?
             let sid = next_sid.fetch_add(1, atomic::Ordering::AcqRel);
             let (session, recv) = session::Session::new(sid);
-            let outbound = recv
-                .map(|m| OwnedMessage::Text(m.to_string()))
-                .map_err(|_| websocket::WebSocketError::NoDataAvailable);
 
             // Clone the event look handle so we can spawn futures in the message handler(s).
             let hclone = handle.clone();
@@ -116,7 +115,13 @@ fn main() {
 								_ => None,
 							}
 						})
-                        .select(outbound)
+                        // Also send messages coming in from the queue from the other thread(s).
+                        .select(recv
+                            .map(|m| {
+                                let raw = m.to_string();
+                                OwnedMessage::Text(raw)
+                            })
+                            .map_err(|_| websocket::WebSocketError::NoDataAvailable))
                         .forward(sink)
 						.and_then(move |(_, sink)| {
                             // Remove the session from the table.
@@ -131,6 +136,7 @@ fn main() {
                         })
 				});
 
+            println!("spawned future");
 			spawn_future(f, "Client Status", &handle);
 			Ok(())
 		});

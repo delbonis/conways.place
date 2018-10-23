@@ -9,8 +9,8 @@
  * anything evil with it please.  https://gitlab.com/treyzania/gameoflight
  */
 
-const WORLD_WIDTH = 1000;
-const WORLD_HEIGHT = 1000;
+const WORLD_WIDTH = 64;
+const WORLD_HEIGHT = WORLD_WIDTH;
 
 const DEFAULT_ZOOM = 10.0;
 const ZOOM_SPRINGYNESS = 3;
@@ -21,6 +21,8 @@ const CAM_ZOOM_MULT = 1.05;
 
 var cameraState = null;
 var cameraTarget = null;
+
+var gWorldState = getStartingWorldState();
 
 function init() {
 
@@ -53,11 +55,8 @@ function init() {
 	updateDisplay();
 	window.requestAnimationFrame(runFrameUpdate)
 
-	// TODO Set up world.
-
 	// Set up connection.
 	let socket = new WebSocket(getSocketUrl(), "gameoflight");
-
 	socket.onopen = function(e) { handleSocketOpen(socket, e); };
 	socket.onmessage = function(e) { handleSocketMessage(socket, e); };
 
@@ -88,8 +87,12 @@ function handleSocketOpen(sock, e) {
 }
 
 function handleSocketMessage(sock, e) {
-	console.log("msg: " + e.data);
+	console.log(e.data);
 	let msg = JSON.parse(e.data);
+
+	if (msg.type == "NewWorldState") {
+		gWorldState = msg.body;
+	}
 }
 
 function handleKeyDown(e) {
@@ -109,43 +112,33 @@ function handleKeyDown(e) {
 	}
 }
 
-function getWorldState() {
-	// Just a gider.  It won't work because the GoL logic happens server-side.
-	return [
-		{
-			x: 500,
-			y: 500,
-			live: true,
-			data: 0
-		},
-		{
-			x: 501,
-			y: 500,
-			live: true,
-			data: 0
-		},
-		{
-			x: 502,
-			y: 500,
-			live: true,
-			data: 0
-		},
-		{
-			x: 502,
-			y: 499,
-			live: true,
-			data: 0
-		},
-		{
-			x: 501,
-			y: 498,
-			live: true,
-			data: 0
+function getStartingWorldState() {
+	let w = [];
+	for (let i = 0; i < WORLD_WIDTH * WORLD_HEIGHT; i++) {
+		let t = newBlankTile();
+		t.live = i % 7 == 0;
+		w.push(t);
+	}
+	return {
+		world: {
+			cells: w,
+			dimensions: [ WORLD_WIDTH, WORLD_HEIGHT ],
+			tick: 0,
 		}
-	];
+	};
+}
+
+function newBlankTile() {
+	return {
+		live: false,
+		last_update: 0,
+		data: 0
+	}
 }
 
 function getNewFrame(worldState, cam, windowWidth, windowHeight) {
+
+	// TODO Switch to the lib that lightingkoala talked about.
 
 	let canvas = document.createElement("canvas");
 	canvas.width = windowWidth;
@@ -171,28 +164,30 @@ function getNewFrame(worldState, cam, windowWidth, windowHeight) {
 	//console.log("camxmin: " + xMin + " camymin: " + yMin);
 
 	// Actually render each tile.
-	worldState.forEach(function(ele) {
+	let cells = worldState.world.cells;
+	for (let i = 0; i < cells.length; i++) {
+
+		let ele = worldState.world.cells[i];
+
 		if (!ele.live) {
-			return; // nobody cares about it so whatever
+			continue;
 		}
 
-		let tx = ele.x;
-		let ty = ele.y;
+		let tx = i % WORLD_WIDTH;
+		let ty = (i - tx) / WORLD_WIDTH;
 
-		//console.log("tile x: " + tx + " y: " + ty);
-
+		// TODO Switch to a chunk-based method so we can avoid this check for every single tile.
 		if (tx >= minRenderX && tx <= maxRenderX && ty >= minRenderY && ty <= maxRenderY) {
 
 			let tileRenderX = (tx * cam.zoom) - xMin;
 			let tileRenderY = (ty * cam.zoom) - yMin;
 
-			//console.log("tile renderx: " + tileRenderX + " rendery: " + tileRenderY);
-
 			ctx.fillStyle = "#000000";
 			ctx.fillRect(tileRenderX, tileRenderY, cam.zoom, cam.zoom);
 
 		}
-	});
+
+	}
 
 	return canvas;
 
@@ -201,7 +196,7 @@ function getNewFrame(worldState, cam, windowWidth, windowHeight) {
 function updateDisplay() {
 
 	let out = document.getElementById("game");
-	let frame = getNewFrame(getWorldState(), cameraState, out.width, out.height);
+	let frame = getNewFrame(gWorldState, cameraState, out.width, out.height);
 
 	let ctx = out.getContext("2d");
 	ctx.fillStyle = "#ffffff";
