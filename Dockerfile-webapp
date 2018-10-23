@@ -15,7 +15,7 @@ COPY webapp /opt/gameoflight/webapp
 WORKDIR /opt/gameoflight
 
 RUN mkdir -p /opt/bins
-RUN cargo -Z unstable-options build --out-dir=/opt/bins --bin gameoflightinst
+RUN cargo -Z unstable-options build --out-dir=/opt/bins --bin gameoflightinst --release
 
 EXPOSE 7908
 
