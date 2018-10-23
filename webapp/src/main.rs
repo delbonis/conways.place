@@ -1,4 +1,5 @@
-#[allow(unused)]
+#![allow(unused)]
+#![feature(integer_atomics)]
 
 #[macro_use] extern crate clap;
 extern crate conway;
@@ -8,12 +9,14 @@ extern crate serde;
 extern crate serde_json;
 extern crate tokio_core;
 extern crate tokio_channel;
+extern crate tokio_timer;
 extern crate futures;
 
 use std::fmt::Debug;
 use std::iter::*;
 use std::thread;
 use std::sync::*;
+use std::sync::atomic::AtomicU64;
 
 use websocket::async::Server;
 use websocket::message::{Message, OwnedMessage};
@@ -26,9 +29,11 @@ mod messages;
 mod session;
 
 const PROTO_NAME: &'static str = "gameoflight";
+const GAME_TICK_MILLIS: u64 = 500;
+const WORLD_SIZE: usize = 64;
 
 /*
- * Some of this was "borrowed" from:
+ * A lot of this connection code was "borrowed" from:
  * https://github.com/websockets-rs/rust-websocket/blob/master/examples/async-server.rs
  */
 
@@ -50,12 +55,16 @@ fn main() {
     // TODO
     let st = Arc::new(Mutex::new(
         GameState {
-            sessions: vec![]
+            sessions: vec![],
+            world: conway::world::World::new((WORLD_SIZE, WORLD_SIZE))
         }
     ));
 
     // This is where the actual game runs.
-    thread::spawn(|| game_sim_thread(st));
+    let wst = st.clone();
+    thread::spawn(move || game_sim_thread(wst));
+
+    let next_sid = Arc::new(AtomicU64::new(0));
 
     println!("Websocket server listening on port {}", ws_port);
     let clients = listener
@@ -73,33 +82,54 @@ fn main() {
 			}
 
             // Make the new session?
-            let (_session, _recv) = session::Session::new();
+            let sid = next_sid.fetch_add(1, atomic::Ordering::AcqRel);
+            let (session, recv) = session::Session::new(sid);
+            let outbound = recv
+                .map(|m| OwnedMessage::Text(m.to_string()))
+                .map_err(|_| websocket::WebSocketError::NoDataAvailable);
+
+            // Clone the event look handle so we can spawn futures in the message handler(s).
+            let hclone = handle.clone();
+            let wref = st.clone();
+
+            // Add the session to the table.
+            {
+                let mut gs: MutexGuard<GameState> = wref.lock().unwrap();
+                gs.sessions.push(session);
+            }
 
 			// accept the request to be a ws connection if it does
 			let f = upgrade
 				.use_protocol(PROTO_NAME)
 				.accept()
-				// send a greeting!
-				.and_then(|(s, _)| s.send(Message::text("Hello!").into()))
-				// simple echo server impl
-				.and_then(|s| {
+				.and_then(move |(s, _)| s.send(Message::text("Hello!").into()))
+				.and_then(move |s| {
 					let (sink, stream) = s.split();
-                    // TODO Add session to GameState
 					stream
 						.take_while(|m| Ok(!m.is_close()))
-						.filter_map(|m| {
+						.filter_map(move |m| {
 							println!("Action: {:?}", m);
+                            let hc = hclone.clone();
 							match m {
-                                OwnedMessage::Text(t) => Some(OwnedMessage::Text(handle_str_packet(t))),
+                                OwnedMessage::Text(t) => Some(OwnedMessage::Text(handle_str_packet(hc, t))),
 								OwnedMessage::Ping(p) => Some(OwnedMessage::Pong(p)),
                                 OwnedMessage::Pong(_) => None,
 								_ => None,
 							}
 						})
-                        // TODO .select(recv.map(...)) here?
+                        .select(outbound)
                         .forward(sink)
-						.and_then(|(_, sink)| sink.send(OwnedMessage::Close(None)))
-                        // TODO After it's done then just remove it from the GameState.
+						.and_then(move |(_, sink)| {
+                            // Remove the session from the table.
+                            let mut gs: MutexGuard<GameState> = wref.lock().unwrap();
+                            gs.sessions = gs.sessions.iter() // TODO Make this better!
+                                .cloned()
+                                .filter(|i| i.id() != sid)
+                                .collect();
+
+                            // Send the close message.
+                            sink.send(OwnedMessage::Close(None))
+                        })
 				});
 
 			spawn_future(f, "Client Status", &handle);
@@ -111,7 +141,8 @@ fn main() {
 }
 
 struct GameState {
-    sessions: Vec<session::Session>
+    sessions: Vec<session::Session>,
+    world: conway::world::World
 }
 
 fn spawn_future<F, I, E>(f: F, desc: &'static str, handle: &Handle)
@@ -125,7 +156,7 @@ where
 	);
 }
 
-fn handle_str_packet(data: String) -> String {
+fn handle_str_packet(handle: Handle, data: String) -> String {
     data // TODO
 }
 

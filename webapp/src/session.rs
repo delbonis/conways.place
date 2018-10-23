@@ -1,9 +1,8 @@
 use tokio_channel::mpsc;
 
-use conway::world;
-
 use messages;
 
+#[derive(Clone, Debug, Hash)]
 pub struct User {
     id: u32,
     token: String,
@@ -29,16 +28,33 @@ impl User {
     }
 }
 
+#[derive(Clone)]
 pub struct Session {
-    pub world_updates: mpsc::Sender<world::World>
+    id: u64,
+    outqueue: mpsc::UnboundedSender<messages::NetMessage>
 }
 
 impl Session {
-    pub fn new() -> (Session, mpsc::Receiver<world::World>) {
-        let (s, r) = mpsc::channel(8);
+    pub fn new(id: u64) -> (Session, mpsc::Receiver<messages::NetMessage>) {
+        let (s, r) = mpsc::unbounded();
         let session = Session {
-            world_updates: s // is 8 enough?  I think it should be.
+            id: id,
+            outqueue: s
         };
         (session, r)
+    }
+
+    pub fn queue_message(&self, m: messages::NetMessage) {
+        self.outqueue.unbounded_send(m);
+    }
+
+    pub fn id(&self) -> u64 {
+        self.id
+    }
+}
+
+impl PartialEq for Session {
+    fn eq(&self, o: &Self) -> bool {
+        self.id == o.id
     }
 }

@@ -1,11 +1,18 @@
+use serde_json;
 
 use conway::world;
 
 #[derive(Clone, Serialize, Deserialize)]
-pub enum ServerMessage {
+pub enum NetMessage {
     Alert(String),
     NewWorldState(NewWorldStateMessage),
     UpdateCells(UpdateCellsMessage)
+}
+
+impl NetMessage {
+    pub fn to_string(&self) -> String {
+        serde_json::to_string(self).unwrap()
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
