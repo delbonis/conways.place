@@ -100,13 +100,12 @@ fn main() {
 			let f = upgrade
 				.use_protocol(PROTO_NAME)
 				.accept()
-				.and_then(move |(s, _)| s.send(Message::text("Hello!").into()))
+				.and_then(move |(s, _)| s.send(Message::text("Hello!").into())) // this doesn't compile if I remove it
 				.and_then(move |s| {
 					let (sink, stream) = s.split();
 					stream
 						.take_while(|m| Ok(!m.is_close()))
 						.filter_map(move |m| {
-							println!("Action: {:?}", m);
                             let hc = hclone.clone();
 							match m {
                                 OwnedMessage::Text(t) => Some(OwnedMessage::Text(handle_str_packet(hc, t, wref2.clone()))), // idk why we have to clone this again
@@ -150,9 +149,9 @@ where
 	F: Future<Item = I, Error = E> + 'static,
 	E: Debug,
 {
-	handle.spawn(
-		f.map_err(move |e| println!("{}: '{:?}'", desc, e))
-			.map(move |_| println!("{}: Finished.", desc)),
+	handle.spawn(f
+			.map(move |_| println!("{}: Finished.", desc))
+            .map_err(move |e| println!("{}: '{:?}'", desc, e)),
 	);
 }
 

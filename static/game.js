@@ -24,6 +24,9 @@ var cameraTarget = null;
 
 var gWorldState = getStartingWorldState();
 
+var gSocket = null;
+var msgHandlers = {}
+
 function init() {
 
 	console.log("hello!");
@@ -55,8 +58,16 @@ function init() {
 	updateDisplay();
 	window.requestAnimationFrame(runFrameUpdate)
 
+	// Set up message handlers.  See messages.rs for more info.
+	msgHandlers["Alert"] = function(sock, m) { alert(m); };
+	msgHandlers["Log"] = function(sock, m) { console.log("remote: " + m); }
+	msgHandlers["NewWorldState"] = function(sock, m) { gWorldState = m; };
+	msgHandlers["Invoice"] = function(sock, m) { handleInvoice(m[0], m[1]); }
+	msgHandlers["InvoicePaid"] function(sock, m) { handleInvoicePaid(m); }
+
 	// Set up connection.
 	let socket = new WebSocket(getSocketUrl(), "gameoflight");
+	gSocket = socket;
 	socket.onopen = function(e) { handleSocketOpen(socket, e); };
 	socket.onmessage = function(e) { handleSocketMessage(socket, e); };
 
@@ -87,11 +98,10 @@ function handleSocketOpen(sock, e) {
 }
 
 function handleSocketMessage(sock, e) {
-	console.log(e.data);
 	let msg = JSON.parse(e.data);
-
-	if (msg.type == "NewWorldState") {
-		gWorldState = msg.body;
+	let handle = msgHandlers[msg.type];
+	if (handle != null && handle != undefined) {
+		handle(sock, msg.body);
 	}
 }
 

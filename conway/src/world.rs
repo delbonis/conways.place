@@ -105,8 +105,10 @@ impl World {
     }
 
     pub fn set_tile_liveness(&mut self, pos: (usize, usize), live: bool) {
-        let i = cartesean_to_index(self.dimensions, pos).unwrap(); // FIXME
-        self.cells[i].live = live;
+        let i = cartesean_to_index(self.dimensions, pos);
+        if i.is_some() {
+            self.cells[i.unwrap()].live = live;
+        }
     }
 
     pub fn step(&self) -> World {

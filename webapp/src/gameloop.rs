@@ -18,7 +18,6 @@ pub struct GameState {
 impl GameState {
     pub fn new(mut w: world::World) -> GameState {
         make_rpentomino((20, 20), &mut w);
-        println!("{:?}", w);
         GameState {
             sessions: vec![],
             world: Arc::new(w)
@@ -54,20 +53,15 @@ pub fn game_sim_thread(st: Arc<Mutex<GameState>>) {
     loop {
 
         // Get the current world state.
-        let prev_step = {
-            let mut state = st.lock().unwrap();
-            state.world.clone()
-        };
-
-        // Compute the next step.
-        // (This might take a while so we don't keep the lock while we're working on it.)
-        let next_step = Arc::new(prev_step.step());
-        println!("{}", next_step);
-
-        // Update it in the world.
         {
-            // Update.
             let mut state = st.lock().unwrap();
+            let prev_step = state.world.as_ref().clone();
+
+            // Compute the next step.
+            let next_step = Arc::new(prev_step.step());
+            //println!("{}", next_step); // TODO Report this somewhere else.
+
+            // Update.
             state.world = next_step.clone(); // should move this clone outside the lock region?
 
             // Send the new state to all the player sessions.
@@ -76,7 +70,7 @@ pub fn game_sim_thread(st: Arc<Mutex<GameState>>) {
             for s in state.sessions.iter() { // idk why I have to .iter() this
                 s.queue_message(messages::NetMessage::new_world_state_message(next_step.clone()))
             }
-        }
+        };
 
         // Sleep for a second.
         // TODO Make it so it sleeps until a second has passed *since the last sleep finished*.
@@ -87,6 +81,36 @@ pub fn game_sim_thread(st: Arc<Mutex<GameState>>) {
 }
 
 // This should really be all contained.
-pub fn handle_message(msg: messages::NetMessage, _handle: Handle, _gs: Arc<Mutex<GameState>>) -> messages::NetMessage {
-    msg // TODO basically a way over-engineered echo server at this point
+pub fn handle_message(msg: messages::NetMessage, _handle: Handle, gs: Arc<Mutex<GameState>>) -> messages::NetMessage {
+    use messages::NetMessage::*;
+    match msg {
+        Log(m) => {
+            println!("remote: {}", m);
+            messages::NetMessage::new_log_msg("ok")
+        }
+        SubmitTiles(stm) => {
+            let mut s = gs.lock().unwrap();
+            let nw = apply_changes_to_world(&s.world, stm.updates);
+            s.world = Arc::new(nw);
+            messages::NetMessage::new_log_msg("updates applied")
+        },
+        _ => messages::NetMessage::new_alert_msg("lol you can't send that, noob")
+    }
+}
+
+fn apply_changes_to_world(world: &world::World, chgs: Vec<messages::TileState>) -> world::World {
+    let mut nw = world.clone();
+    for chg in chgs {
+        nw.set_tile_liveness((chg.x, chg.y), chg.live);
+    }
+    nw
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct EditWindow {
+    xpos: usize,
+    ypos: usize,
+
+    width: usize,
+    height: usize
 }
