@@ -60,10 +60,10 @@ function init() {
 
 	// Set up message handlers.  See messages.rs for more info.
 	msgHandlers["Alert"] = function(sock, m) { alert(m); };
-	msgHandlers["Log"] = function(sock, m) { console.log("remote: " + m); }
+	msgHandlers["Log"] = function(sock, m) { console.log("remote: " + m); };
 	msgHandlers["NewWorldState"] = function(sock, m) { gWorldState = m; };
-	msgHandlers["Invoice"] = function(sock, m) { handleInvoice(m[0], m[1]); }
-	msgHandlers["InvoicePaid"] function(sock, m) { handleInvoicePaid(m); }
+	msgHandlers["Invoice"] = function(sock, m) { handleInvoice(m[0], m[1]); };
+	msgHandlers["InvoicePaid"] = function(sock, m) { handleInvoicePaid(m); };
 
 	// Set up connection.
 	let socket = new WebSocket(getSocketUrl(), "gameoflight");
