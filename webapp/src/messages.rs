@@ -14,7 +14,7 @@ pub enum NetMessage {
     NewWorldState(NewWorldStateMessage),
     UpdateCells(UpdateCellsMessage),
     RequestEditWindow,
-    UpdateEditWindow(gameloop::EditWindow),
+    UpdateEditWindow(Option<gameloop::EditWindow>),
     SubmitTiles(SubmitTilesMessage),
     Invoice(String, String), // ("id", "body")
     InvoicePaid(String) // "id"

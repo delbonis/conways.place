@@ -11,19 +11,22 @@ extern crate tokio_core;
 extern crate tokio_channel;
 extern crate tokio_timer;
 extern crate futures;
+extern crate clightningrpc;
 
+use std::env;
 use std::fmt::Debug;
 use std::iter::*;
 use std::thread;
 use std::sync::*;
 use std::sync::atomic::AtomicU64;
+use std::path::PathBuf;
 
 use websocket::async::Server;
 use websocket::message::{Message, OwnedMessage};
 use websocket::server::InvalidConnection;
-
 use futures::{Future, Sink, Stream};
 use tokio_core::reactor::{Core, Handle};
+use clightningrpc::LightningRPC;
 
 use conway::world;
 
@@ -46,11 +49,35 @@ fn main() {
         (version: "0.1.0")
         (author: "treyzania <treyzania@gmail.com>")
         (about: "The Conway's Game of Life instance game server.")
-        (@arg wsport: --wp +takes_value "Port to host the websocket server on.  Default: 7908"))
+        (@arg wsport: --port -p +takes_value "Port to host the websocket server on.  Default: 7908")
+        (@arg clsock: --clsocket -s +takes_value "Socket path for c-lightning.  Default: default")
+        (@arg testnet: --testnet "Switch to using testnet stuff."))
         .get_matches();
 
     let ws_port: u16 = matches.value_of("wsport").unwrap_or("7908").parse().unwrap();
 
+    // Figure out the full path to the socket for c-lightning.
+    #[allow(deprecated)]
+    let cl_sock = matches.value_of("clsock")
+        .map(PathBuf::from)
+        .map(|r| env::current_dir()
+            .unwrap()
+            .join(r))
+        .unwrap_or(
+            env::home_dir()
+                .unwrap()
+                .join(".lightning/lightning-rpc"));
+    let testnet_huh: bool = matches.value_of("testnet").unwrap_or("false").parse().unwrap();
+
+    // Create the client for c-lightning so we can do stuff with it later.
+    println!("c-lightning socket: {}", cl_sock.display());
+    let ln_client: Arc<Mutex<LightningRPC>> = Arc::new(Mutex::new(LightningRPC::new(&cl_sock)));
+    {
+        let mut c = ln_client.lock().unwrap();
+        println!("{:?}", c.getinfo().unwrap());
+    }
+
+    // Set up event loop and listening port.
     let mut core = Core::new().unwrap();
     let handle = core.handle();
     let listener = Server::bind(format!("0.0.0.0:{}", ws_port).as_ref() as &str, &handle).unwrap();
@@ -64,6 +91,7 @@ fn main() {
     let tst = st.clone();
     thread::spawn(move || gameloop::game_sim_thread(tst));
 
+    // Session ID counter.
     let next_sid = Arc::new(AtomicU64::new(0));
 
     println!("Websocket server listening on port {}", ws_port);

@@ -1,6 +1,7 @@
 FROM rustlang/rust:nightly-slim
 
 RUN apt-get update && apt-get -y install \
+	protobuf-compiler
 	pkg-config \
 	openssl \
 	libssl-dev
@@ -19,4 +20,4 @@ RUN cargo -Z unstable-options build --out-dir=/opt/bins --bin gameoflightinst --
 
 EXPOSE 7908
 
-ENTRYPOINT ["/opt/bins/gameoflightinst"]
+ENTRYPOINT ["/opt/bins/gameoflightinst", "--testnet"]

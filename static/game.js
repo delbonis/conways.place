@@ -23,6 +23,7 @@ var cameraState = null;
 var cameraTarget = null;
 
 var gWorldState = getStartingWorldState();
+var gEditWindow = null;
 
 var gSocket = null;
 var msgHandlers = {}
@@ -62,6 +63,7 @@ function init() {
 	msgHandlers["Alert"] = function(sock, m) { alert(m); };
 	msgHandlers["Log"] = function(sock, m) { console.log("remote: " + m); };
 	msgHandlers["NewWorldState"] = function(sock, m) { gWorldState = m; };
+	msgHandlers["UpdateEditWindow"] = function(sock, m) { gEditWindow = m; };
 	msgHandlers["Invoice"] = function(sock, m) { handleInvoice(m[0], m[1]); };
 	msgHandlers["InvoicePaid"] = function(sock, m) { handleInvoicePaid(m); };
 

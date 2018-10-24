@@ -13,6 +13,7 @@ tokio-core = "0.1"
 tokio-channel = "0.1"
 tokio-timer = "^0.1"
 futures = "0.1"
+clightningrpc = "0.1.0"
 
 [dependencies.websocket]
 version = "0.20.3"
