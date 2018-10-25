@@ -33,7 +33,15 @@ pub fn payment_proc_thread(gs: Arc<Mutex<gameloop::GameState>>, sock: PathBuf) {
                         // First, apply the updates we want.
                         let mut nw = st.world.as_ref().clone();
                         updates.iter()
-                            .for_each(|u| nw.set_tile_liveness((u.x, u.y), u.live));
+                            .for_each(|u| {
+                                let mut co = nw.cell_at_mut((u.x, u.y));
+                                if !co.is_some() {
+                                    return;
+                                }
+                                let mut c = co.unwrap();
+                                c.live = u.live;
+                                c.data = u.data;
+                            });
 
                         // Replace the world in the game state.
                         st.world = Arc::new(nw);

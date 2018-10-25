@@ -64,5 +64,6 @@ pub struct SubmitTilesMessage {
 pub struct TileState {
     pub x: usize,
     pub y: usize,
-    pub live: bool
+    pub live: bool,
+    pub data: u32
 }

@@ -32,11 +32,12 @@ function submitAlert(msg) {
 // This is ordered in a weird way so that it's easier to call by hand.
 function submitTilesLive(cells) {
 	let updates = [];
-	for (let i = 0; i < cells.length; i += 3) {
+	for (let i = 0; i < cells.length; i += 4) {
 		updates.push({
 			x: cells[i],
 			y: cells[i + 1],
-			live: cells[i + 2]
+			live: cells[i + 2],
+			data: cells[i + 3]
 		});
 	}
 
@@ -45,11 +46,11 @@ function submitTilesLive(cells) {
 
 function __submitGlider(x, y) {
 	submitTilesLive([
-		x + 1, y,     true,
-		x + 2, y + 1, true,
-		x,     y + 2, true,
-		x + 1, y + 1, true,
-		x + 2, y + 2, true
+		x + 1, y,     true, 0,
+		x + 2, y + 1, true, 1,
+		x,     y + 2, true, 2,
+		x + 1, y + 1, true, 3,
+		x + 2, y + 2, true, 4
 	]);
 }
 

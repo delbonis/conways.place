@@ -27,8 +27,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-const WORLD_WIDTH = 256;
-const WORLD_HEIGHT = WORLD_WIDTH;
+var WORLD_WIDTH = 256;
+var WORLD_HEIGHT = WORLD_WIDTH;
 
 const DEFAULT_ZOOM = 10.0;
 const ZOOM_SPRINGYNESS = 3;
@@ -95,7 +95,7 @@ function init() {
 	// Set up message handlers.  See messages.rs for more info.
 	msgHandlers["Alert"] = function(sock, m) { alert(m); };
 	msgHandlers["Log"] = function(sock, m) { console.log("remote: " + m); };
-	msgHandlers["NewWorldState"] = function(sock, m) { applyNewWorldState(m) };
+	msgHandlers["NewWorldState"] = function(sock, m) { applyNewWorldState(m.world) };
 	msgHandlers["UpdateCells"] = function(sock, m) { applyWorldUpdates(m) };
 	msgHandlers["UpdateEditWindow"] = function(sock, m) { gEditWindow = m; };
 	msgHandlers["Invoice"] = function(sock, m) { handleInvoice(m[0], m[1]); };
@@ -121,7 +121,7 @@ function applyNewWorldState(s) {
 	let nw = [];
 	for (let i = 0; i < WORLD_WIDTH; i++) {
 		let nc = [];
-		for (let j = 0; j < WORLD_HEIGHT; i++) {
+		for (let j = 0; j < WORLD_HEIGHT; j++) {
 			nc.push(newBlankTile());
 		}
 		nw.push(nc);
@@ -135,7 +135,7 @@ function applyNewWorldState(s) {
 	}
 
 	// Apply it.
-	gWorldCells = nw;
+	gWorldState = nw;
 
 }
 
