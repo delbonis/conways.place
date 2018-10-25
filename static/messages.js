@@ -38,8 +38,9 @@ function __submitGlider(x, y) {
 var invoices = {}
 
 function handleInvoice(id, msg) {
-	invoices[id] = msg
-	announceInvoice(id)
+	invoices[id] = msg;
+	console.log("new invoice: " + invoices[id]);
+	announceInvoice(id);
 }
 
 // TODO Make this not look like shit.

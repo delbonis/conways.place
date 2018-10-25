@@ -12,6 +12,7 @@ extern crate tokio_channel;
 extern crate tokio_timer;
 extern crate futures;
 extern crate clightningrpc;
+extern crate rand;
 
 use std::env;
 use std::fmt::Debug;
@@ -33,6 +34,8 @@ use conway::world;
 mod messages;
 mod session;
 mod gameloop;
+mod invoiceloop;
+mod payloop;
 
 const PROTO_NAME: &'static str = "gameoflight";
 const GAME_TICK_MILLIS: u64 = 500;
@@ -67,15 +70,9 @@ fn main() {
             env::home_dir()
                 .unwrap()
                 .join(".lightning/lightning-rpc"));
-    let testnet_huh: bool = matches.value_of("testnet").unwrap_or("false").parse().unwrap();
-
-    // Create the client for c-lightning so we can do stuff with it later.
     println!("c-lightning socket: {}", cl_sock.display());
-    let ln_client: Arc<Mutex<LightningRPC>> = Arc::new(Mutex::new(LightningRPC::new(&cl_sock)));
-    {
-        let mut c = ln_client.lock().unwrap();
-        println!("{:?}", c.getinfo().unwrap());
-    }
+
+    let testnet_huh: bool = matches.value_of("testnet").unwrap_or("false").parse().unwrap(); // testnet?
 
     // Set up event loop and listening port.
     let mut core = Core::new().unwrap();
@@ -87,9 +84,18 @@ fn main() {
         gameloop::GameState::new(world::World::new((WORLD_SIZE, WORLD_SIZE)))
     ));
 
+    // threads and shit.
+    let (ir_send, ir_recv) = mpsc::channel();
+    let ist = st.clone();
+    let isock = cl_sock.clone();
+    thread::spawn(move || invoiceloop::invoice_proc_thread(ir_recv, ist, isock));
+    let pst = st.clone();
+    let psock = cl_sock.clone();
+    thread::spawn(move || payloop::payment_proc_thread(pst, psock));
+
     // This is where the actual game runs.
-    let tst = st.clone();
-    thread::spawn(move || gameloop::game_sim_thread(tst));
+    let lst = st.clone();
+    thread::spawn(|| gameloop::game_sim_thread(lst));
 
     // Session ID counter.
     let next_sid = Arc::new(AtomicU64::new(0));
@@ -117,11 +123,12 @@ fn main() {
             let hclone = handle.clone();
             let wref = st.clone();
             let wref2 = st.clone();
+            let irs2 = ir_send.clone();
 
             // Add the session to the table.
             {
                 let mut gs: MutexGuard<gameloop::GameState> = wref.lock().unwrap();
-                gs.sessions.push(session);
+                gs.sessions.insert(sid, session);
             }
 
 			// accept the request to be a ws connection if it does
@@ -136,7 +143,9 @@ fn main() {
 						.filter_map(move |m| {
                             let hc = hclone.clone();
 							match m {
-                                OwnedMessage::Text(t) => Some(OwnedMessage::Text(handle_str_packet(hc, t, wref2.clone()))), // idk why we have to clone this again
+                                OwnedMessage::Text(t) => Some(OwnedMessage::Text({
+                                    handle_str_packet(sid, hc, t, wref2.clone(), irs2.clone()) // not sure why we have to clone these again...
+                                })),
 								OwnedMessage::Ping(p) => Some(OwnedMessage::Pong(p)),
                                 OwnedMessage::Pong(_) => None,
 								_ => None,
@@ -153,10 +162,7 @@ fn main() {
 						.and_then(move |(_, sink)| {
                             // Remove the session from the table.
                             let mut gs: MutexGuard<gameloop::GameState> = wref.lock().unwrap();
-                            gs.sessions = gs.sessions.iter() // TODO Make this better!
-                                .cloned()
-                                .filter(|i| i.id() != sid)
-                                .collect();
+                            gs.sessions.remove(&sid);
 
                             // Send the close message.
                             sink.send(OwnedMessage::Close(None))
@@ -183,14 +189,14 @@ where
 	);
 }
 
-fn handle_str_packet(handle: Handle, data: String, gs: Arc<Mutex<gameloop::GameState>>) -> String {
+fn handle_str_packet(sid: u64, handle: Handle, data: String, gs: Arc<Mutex<gameloop::GameState>>, ir_chan: mpsc::Sender<invoiceloop::InvoiceRequest>) -> String {
 
     let nm = messages::NetMessage::from_string(&data);
     if let Err(m) = nm {
         return m; // TODO Make this better.
     }
 
-    let res = gameloop::handle_message(nm.unwrap(), handle, gs);
+    let res = gameloop::handle_message(sid, nm.unwrap(), handle, gs, ir_chan);
     res.to_string()
 
 }

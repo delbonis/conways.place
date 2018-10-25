@@ -1,6 +1,10 @@
+
+use std::collections::HashSet;
+
 use tokio_channel::mpsc;
 
 use messages;
+use gameloop;
 
 #[derive(Clone, Debug, Hash)]
 pub struct User {
@@ -31,6 +35,9 @@ impl User {
 #[derive(Clone)]
 pub struct Session {
     id: u64,
+    window: Option<gameloop::EditWindow>,
+    invoices: HashSet<String>,
+
     outqueue: mpsc::UnboundedSender<messages::NetMessage>
 }
 
@@ -39,6 +46,8 @@ impl Session {
         let (s, r) = mpsc::unbounded();
         let session = Session {
             id: id,
+            window: None,
+            invoices: HashSet::new(),
             outqueue: s
         };
         (session, r)

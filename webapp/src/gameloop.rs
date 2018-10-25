@@ -2,25 +2,31 @@
 use std::sync::*;
 use std::time;
 use std::thread;
+use std::collections::HashMap;
 
 use tokio_core::reactor::Handle;
+use rand::{self, Rng, RngCore};
 
 use conway::world;
 
 use session;
 use messages;
+use invoiceloop;
 
 pub struct GameState {
-    pub sessions: Vec<session::Session>,
-    pub world: Arc<world::World>
+    pub sessions: HashMap<u64, session::Session>,
+    pub world: Arc<world::World>,
+
+    pub pending_updates: HashMap<String, (u64, Vec<messages::TileState>)>
 }
 
 impl GameState {
     pub fn new(mut w: world::World) -> GameState {
         make_rpentomino((20, 20), &mut w);
         GameState {
-            sessions: vec![],
-            world: Arc::new(w)
+            sessions: HashMap::new(),
+            world: Arc::new(w),
+            pending_updates: HashMap::new()
         }
     }
 }
@@ -68,20 +74,21 @@ pub fn game_sim_thread(st: Arc<Mutex<GameState>>) {
             // TODO Make diffs instead of just sending the whole world to players.
             // TODO Move this somewhere else.  Should we put an Arc or Rc around worlds?
             for s in state.sessions.iter() { // idk why I have to .iter() this
-                s.queue_message(messages::NetMessage::new_world_state_message(next_step.clone()))
+                s.1.queue_message(messages::NetMessage::new_world_state_message(next_step.clone()))
             }
         };
 
         // Sleep for a second.
         // TODO Make it so it sleeps until a second has passed *since the last sleep finished*.
-        thread::sleep(time::Duration::from_millis(100));
+        thread::sleep(time::Duration::from_millis(250));
 
     }
 
 }
 
 // This should really be all contained.
-pub fn handle_message(msg: messages::NetMessage, _handle: Handle, gs: Arc<Mutex<GameState>>) -> messages::NetMessage {
+// TODO Move the ir channel somewhere else.  This is a baaad place to pass it in.
+pub fn handle_message(sid: u64, msg: messages::NetMessage, _handle: Handle, gs: Arc<Mutex<GameState>>, ir_chan: mpsc::Sender<invoiceloop::InvoiceRequest>) -> messages::NetMessage {
     use messages::NetMessage::*;
     match msg {
         Log(m) => {
@@ -89,10 +96,25 @@ pub fn handle_message(msg: messages::NetMessage, _handle: Handle, gs: Arc<Mutex<
             messages::NetMessage::new_log_msg("ok")
         }
         SubmitTiles(stm) => {
+            let label = random_label();
             let mut s = gs.lock().unwrap();
-            let nw = apply_changes_to_world(&s.world, stm.updates);
-            s.world = Arc::new(nw);
-            messages::NetMessage::new_log_msg("updates applied")
+
+            // Insert the pending update into our cache.
+            s.pending_updates.insert(label.clone(), (sid, stm.updates.clone()));
+
+            // Now actually set up to create the invoice to send to the user.
+            let cnt = stm.updates.len();
+            let desc = format!("payment to set liveness of {} tiles (update label: {})", cnt, label);
+            let ir = invoiceloop::InvoiceRequest::new(
+                sid,
+                cnt as i64 * 10,
+                label,
+                desc
+            );
+            ir_chan.send(ir);
+
+            // Return that the invoice will come later.
+            messages::NetMessage::new_log_msg("creating invoice...")
         },
         _ => messages::NetMessage::new_alert_msg("lol you can't send that, noob")
     }
@@ -104,6 +126,23 @@ fn apply_changes_to_world(world: &world::World, chgs: Vec<messages::TileState>) 
         nw.set_tile_liveness((chg.x, chg.y), chg.live);
     }
     nw
+}
+
+const LABEL_LEN: usize = 16;
+const LABEL_CHARS: &str = "1234567890abcdef";
+
+fn random_label() -> String {
+    // FIXME This shouldn't be as hard as it is.
+
+    let tmp = String::from(LABEL_CHARS); // FIXME NO NO NO NO THIS IS SO BAD.
+
+    let mut rng = rand::thread_rng();
+    let mut buf = String::with_capacity(LABEL_LEN);
+    for _ in 0..LABEL_LEN {
+        buf.push(tmp.chars().nth(rng.next_u32() as usize % tmp.len()).unwrap());
+    }
+
+    buf
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
