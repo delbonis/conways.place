@@ -142,7 +142,13 @@ fn compute_tile_next_step(adjacents: Vec<&Tile>, subject: &Tile, tick_for: u64) 
     Tile {
         live: will_live,
         last_update: if will_live != subject.live { tick_for } else { subject.last_update },
-        data: if will_live { adjacents[tick_for as usize % adjacents.len()].data } else { 0 }
+        data: if will_live {
+            if subject.live {
+                subject.data // if it's already alive, just use the same color
+            } else {
+                adjacents[tick_for as usize % adjacents.len()].data // if it's becomming alive, then pick a new one
+            }
+        } else { 0 }
     }
 }
 
