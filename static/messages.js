@@ -44,13 +44,13 @@ function submitTilesLive(cells) {
 	sendMessageToServer("SubmitTiles", {updates: updates})
 }
 
-function __submitGlider(x, y) {
+function __submitGlider(x, y, color) {
 	submitTilesLive([
-		x + 1, y,     true, 0,
-		x + 2, y + 1, true, 1,
-		x,     y + 2, true, 2,
-		x + 1, y + 1, true, 3,
-		x + 2, y + 2, true, 4
+		x + 1, y,     true, color,
+		x + 2, y + 1, true, color,
+		x,     y + 2, true, color,
+		x + 1, y + 1, true, color,
+		x + 2, y + 2, true, color
 	]);
 }
 
