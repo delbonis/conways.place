@@ -37,14 +37,29 @@ const RENDER_CULL_BUFFER = 3;
 const CAM_MOVE_SPEED = 50;
 const CAM_ZOOM_MULT = 1.05;
 
+const COLORS = [
+	"#000000",
+	"#0000ff",
+	"#00ff00",
+	"#00ffff",
+	"#ff0000",
+	"#ff00ff",
+	"#ffff00",
+	"#ffffff"
+];
+
 var cameraState = null;
 var cameraTarget = null;
 
-var gWorldState = getStartingWorldState();
+var gWorldState = getStartingWorldCells();
 var gEditWindow = null;
 
 var gSocket = null;
 var msgHandlers = {}
+
+var debug = {
+	printTilesRendered: false
+}
 
 function init() {
 
@@ -80,7 +95,8 @@ function init() {
 	// Set up message handlers.  See messages.rs for more info.
 	msgHandlers["Alert"] = function(sock, m) { alert(m); };
 	msgHandlers["Log"] = function(sock, m) { console.log("remote: " + m); };
-	msgHandlers["NewWorldState"] = function(sock, m) { gWorldState = m; };
+	msgHandlers["NewWorldState"] = function(sock, m) { applyNewWorldState(m) };
+	msgHandlers["UpdateCells"] = function(sock, m) { applyWorldUpdates(m) };
 	msgHandlers["UpdateEditWindow"] = function(sock, m) { gEditWindow = m; };
 	msgHandlers["Invoice"] = function(sock, m) { handleInvoice(m[0], m[1]); };
 	msgHandlers["InvoicePaid"] = function(sock, m) { handleInvoicePaid(m); };
@@ -93,6 +109,41 @@ function init() {
 
 	console.log("setup finished!");
 
+}
+
+function applyNewWorldState(s) {
+
+	// Update the dimensions we know about.
+	WORLD_WIDTH = s.dimensions[0];
+	WORLD_HEIGHT = s.dimensions[1];
+
+	// Create a new empty world grid.
+	let nw = [];
+	for (let i = 0; i < WORLD_WIDTH; i++) {
+		let nc = [];
+		for (let j = 0; j < WORLD_HEIGHT; i++) {
+			nc.push(newBlankTile());
+		}
+		nw.push(nc);
+	}
+
+	// Populate the grid with the tiles from the new state.
+	for (let i = 0; i < s.cells.length; i++) {
+		let tx = i % WORLD_WIDTH;
+		let ty = (i - tx) / WORLD_WIDTH;
+		nw[tx][ty] = s.cells[i];
+	}
+
+	// Apply it.
+	gWorldCells = nw;
+
+}
+
+function applyWorldUpdates(updates) {
+	for (let i = 0; i < updates.length; i++) {
+		let u = updates[i];
+		gWorldCells[u.pos[0]][u.pos[1]] = u.state;
+	}
 }
 
 function getSocketUrl() {
@@ -142,20 +193,19 @@ function handleKeyDown(e) {
 	}
 }
 
-function getStartingWorldState() {
+function getStartingWorldCells() {
 	let w = [];
-	for (let i = 0; i < WORLD_WIDTH * WORLD_HEIGHT; i++) {
-		let t = newBlankTile();
-		t.live = i % 7 == 0;
-		w.push(t);
-	}
-	return {
-		world: {
-			cells: w,
-			dimensions: [ WORLD_WIDTH, WORLD_HEIGHT ],
-			tick: 0,
+	for (let i = 0; i < WORLD_HEIGHT; i++) {
+		let r = [];
+		for (let j = 0; j < WORLD_WIDTH; j++) {
+			let t = newBlankTile();
+			t.live = (i + j) % 7 == 0;
+			t.data = 0;
+			r.push(t);
 		}
-	};
+		w.push(r);
+	}
+	return w;
 }
 
 function newBlankTile() {
@@ -168,24 +218,25 @@ function newBlankTile() {
 
 function getNewFrame(worldState, cam, windowWidth, windowHeight) {
 
-	// TODO Switch to the lib that lightingkoala talked about.
+	// TODO Switch to the lib that lightingkoala talked about?
 
 	let canvas = document.createElement("canvas");
 	canvas.width = windowWidth;
 	canvas.height = windowHeight;
 
 	let ctx = canvas.getContext("2d");
+	ctx.imageSmoothingEnabled = false;
 
 	// Figure out how much we have to render around us.
 	let frameRenderedTilesHoriz = (windowWidth / 2) / cam.zoom + RENDER_CULL_BUFFER;
 	let frameRenderedTilesVert = (windowHeight / 2) / cam.zoom + RENDER_CULL_BUFFER;
 	//console.log("horiz buf: " + frameRenderedTilesHoriz + " vert buf: " + frameRenderedTilesVert);
 
-	// Figure out what the actual mins and maxes are for the viewport.
-	let minRenderX = cam.x - frameRenderedTilesHoriz;
-	let maxRenderX = cam.x + frameRenderedTilesHoriz;
-	let minRenderY = cam.y - frameRenderedTilesVert;
-	let maxRenderY = cam.y + frameRenderedTilesVert;
+	// Figure out what the actual mins and maxes are for the viewport, also casting to int.
+	let minRenderX = (cam.x - frameRenderedTilesHoriz) | 0;
+	let maxRenderX = (cam.x + frameRenderedTilesHoriz) | 0;
+	let minRenderY = (cam.y - frameRenderedTilesVert) | 0;
+	let maxRenderY = (cam.y + frameRenderedTilesVert) | 0;
 	//console.log("rxmin: " + minRenderX + " rxmax: " + maxRenderX + " rymin: " + minRenderY + " rymax: " + maxRenderY);
 
 	// Now camera screen space calculations.
@@ -194,29 +245,43 @@ function getNewFrame(worldState, cam, windowWidth, windowHeight) {
 	//console.log("camxmin: " + xMin + " camymin: " + yMin);
 
 	// Actually render each tile.
-	let cells = worldState.world.cells;
-	for (let i = 0; i < cells.length; i++) {
+	let rendered = 0;
+	for (let x = minRenderX; x <= maxRenderX; x++) {
+		for (let y = minRenderY; y <= maxRenderY; y++) {
 
-		let ele = worldState.world.cells[i];
+			// Make sure we don't bother rendering things that are out of bounds.
+			if (x < 0 || x >= WORLD_WIDTH || y < 0 || y >= WORLD_HEIGHT) {
+				continue;
+			}
 
-		if (!ele.live) {
-			continue;
-		}
+			// Lookup the tile.
+			let t = worldState[x][y];
 
-		let tx = i % WORLD_WIDTH;
-		let ty = (i - tx) / WORLD_WIDTH;
+			// Don't render if it is a dead tile, although we might change this at some point.
+			if (!t.live) {
+				continue;
+			}
 
-		// TODO Switch to a chunk-based method so we can avoid this check for every single tile.
-		if (tx >= minRenderX && tx <= maxRenderX && ty >= minRenderY && ty <= maxRenderY) {
+			// Figure out which color to draw the tile as.
+			let color = "#00FF00";
+			if (t.data >= 0 && t.data < COLORS.length) {
+				color = COLORS[t.data];
+			}
 
-			let tileRenderX = (tx * cam.zoom) - xMin;
-			let tileRenderY = (ty * cam.zoom) - yMin;
+			// Calculate positions.
+			let tileRenderX = (x * cam.zoom) - xMin;
+			let tileRenderY = (y * cam.zoom) - yMin;
 
-			ctx.fillStyle = "#000000";
+			// Actually render the tile.
+			ctx.fillStyle = color;
 			ctx.fillRect(tileRenderX, tileRenderY, cam.zoom, cam.zoom);
+			rendered++;
 
 		}
+	}
 
+	if (debug.printTilesRendered) {
+		console.log("drew " + rendered + " tiles");
 	}
 
 	return canvas;
@@ -229,6 +294,7 @@ function updateDisplay() {
 	let frame = getNewFrame(gWorldState, cameraState, out.width, out.height);
 
 	let ctx = out.getContext("2d");
+	ctx.imageSmoothingEnabled = false;
 	ctx.fillStyle = "#ffffff";
 	ctx.fillRect(0, 0, out.width, out.height);
 	ctx.drawImage(frame, 0, 0);
