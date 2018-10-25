@@ -9,7 +9,7 @@
  * anything evil with it please.  https://gitlab.com/treyzania/gameoflight
  */
 
-const WORLD_WIDTH = 64;
+const WORLD_WIDTH = 256;
 const WORLD_HEIGHT = WORLD_WIDTH;
 
 const DEFAULT_ZOOM = 10.0;

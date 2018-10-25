@@ -22,7 +22,17 @@ pub struct GameState {
 
 impl GameState {
     pub fn new(mut w: world::World) -> GameState {
-        make_rpentomino((20, 20), &mut w);
+        let pos = vec![
+            (100, 100),
+            (85, 85),
+            (50, 50),
+            (50, 150),
+            (150, 50),
+            (150, 150),
+        ];
+        for p in pos {
+            make_rpentomino(p, &mut w);
+        }
         GameState {
             sessions: HashMap::new(),
             world: Arc::new(w),
@@ -130,6 +140,7 @@ fn apply_changes_to_world(world: &world::World, chgs: Vec<messages::TileState>) 
 
 const LABEL_LEN: usize = 16;
 const LABEL_CHARS: &str = "1234567890abcdef";
+const LABEL_PREFIX: &str = "conway-";
 
 fn random_label() -> String {
     // FIXME This shouldn't be as hard as it is.
@@ -137,7 +148,8 @@ fn random_label() -> String {
     let tmp = String::from(LABEL_CHARS); // FIXME NO NO NO NO THIS IS SO BAD.
 
     let mut rng = rand::thread_rng();
-    let mut buf = String::with_capacity(LABEL_LEN);
+    let mut buf = String::with_capacity(LABEL_LEN + LABEL_PREFIX.len());
+    buf.push_str(LABEL_PREFIX);
     for _ in 0..LABEL_LEN {
         buf.push(tmp.chars().nth(rng.next_u32() as usize % tmp.len()).unwrap());
     }

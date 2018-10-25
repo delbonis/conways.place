@@ -39,7 +39,7 @@ mod payloop;
 
 const PROTO_NAME: &'static str = "gameoflight";
 const GAME_TICK_MILLIS: u64 = 500;
-const WORLD_SIZE: usize = 64;
+const WORLD_SIZE: usize = 256;
 
 /*
  * A lot of this connection code was "borrowed" from:

@@ -23,11 +23,12 @@ pub fn payment_proc_thread(gs: Arc<Mutex<gameloop::GameState>>, sock: PathBuf) {
                 last = v.pay_index;
 
                 let label = &v.label;
-                println!("invoice paid: {}", label);
 
                 let mut st = gs.lock().unwrap(); // FIXME
                 match st.pending_updates.remove(label) {
                     Some((sid, updates)) => {
+
+                        println!("invoice paid: {}", label);
 
                         // First, apply the updates we want.
                         let mut nw = st.world.as_ref().clone();
