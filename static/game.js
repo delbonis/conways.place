@@ -50,7 +50,6 @@ var keys = {};
 
 var userColor = Math.floor(Math.random() * COLORS.length);
 var userDraw = []; // list of positions
-var userCurrentTemplate = [{x: 0, y: 0}]; // TODO More templates.
 
 var pendingDraws = {};
 
@@ -100,6 +99,7 @@ function init() {
 	// Start render procedures.
 	updateDisplay();
 	updateSatoshiCostDisplay();
+	updateUserPen();
 	window.requestAnimationFrame(runFrameUpdate)
 
 	// Set up message handlers.  See messages.rs for more info.
@@ -286,6 +286,9 @@ function submitPendingCells() {
 	// Now we preemptively open the invoice box, and then send the request off.
 	showInvoiceBox("Processing...")
 	sendMessageToServer("SubmitTiles", {updates: updates});
+
+	// Also don't forget to clear the cost display.
+	updateSatoshiCostDisplay();
 }
 
 function convertScreenSpaceToWorldSpace(pos) {

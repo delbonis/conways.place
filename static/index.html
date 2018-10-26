@@ -28,6 +28,7 @@
 
 		<script src="messages.js"></script>
 		<script src="invoices.js"></script>
+		<script src="templates.js"></script>
 	</head>
 	<body onload="init();">
 		<div class="content">
@@ -53,6 +54,25 @@
 			<div id="infocol">
 				<div id="colorbox" class="panel">
 					<h3>Draw!</h3>
+					Style:
+					<select name="templatename" onchange="setUserPenStyle(this.value);" autocomplete="off">
+						<option value="none">None</option>
+						<option value="single" selected="selected">Single</option>
+						<option value="glider">Glider</option>
+						<option value="rpent">R-Pentomino</option>
+						<option value="glidergun">Glider Gun</option>
+					</select>
+					<br/>
+					Flip:
+					<input type="checkbox" name="templateflip" onchange="setUserPenFlip(this.checked);" autocomplete="off">
+					Rotate:
+					<select name="templaterot" onchange="setUserPenRot(this.value);" autocomplete="off">
+						<option value="0">Flat</option>
+						<option value="1">1/4 CCW</option>
+						<option value="2">180</option>
+						<option value="3">1/4 CW</option>
+					</select>
+					<br/><br/>
 					<table>
 						<tbody>
 							<tr>
@@ -83,13 +103,6 @@
 					</div>
 					<hr/>
 					<button onclick="dismissNewInvoiceBox();">Dismiss</button>
-				</div>
-
-				<div id="templatebox" class="panel">
-					<h4>Draw Style</h4>
-					<p>
-						// TODO.
-					</p>
 				</div>
 			</div>
 		</div>
