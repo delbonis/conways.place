@@ -99,6 +99,7 @@ function init() {
 
 	// Start render procedures.
 	updateDisplay();
+	updateSatoshiCostDisplay();
 	window.requestAnimationFrame(runFrameUpdate)
 
 	// Set up message handlers.  See messages.rs for more info.
@@ -249,6 +250,9 @@ function tryAddCellToPending(x, y) {
 		x: x,
 		y: y
 	});
+
+	// And update the UI.
+	updateSatoshiCostDisplay();
 }
 
 function removeCellFromPending(x, y) {
@@ -256,6 +260,7 @@ function removeCellFromPending(x, y) {
 	for (let i = 0; i < userDraw.length; i++) {
 		if (userDraw[i].x == x && userDraw[i].y == y) {
 			userDraw.splice(i, 1);
+			updateSatoshiCostDisplay();
 			return true;
 		}
 	}
@@ -288,4 +293,18 @@ function convertScreenSpaceToWorldSpace(pos) {
 		x: ((pos.x - lastCanvasWidth / 2) / cameraState.zoom) + cameraState.x,
 		y: ((pos.y - lastCanvasHeight / 2) / cameraState.zoom) + cameraState.y
 	}
+}
+
+function updateSatoshiCostDisplay() {
+	let se = document.getElementById("pendingcost");
+	se.innerHTML = computeCellSatoshiCost(userDraw.length);
+}
+
+/*
+ * This is just here in case we have to change it later.  And no, you can't just
+ * change this function to make your drawing cost less.  This is just for the UI
+ * and you'd only be lying to yourself.
+ */
+function computeCellSatoshiCost(n) {
+	return n * 10;
 }

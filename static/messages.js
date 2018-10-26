@@ -41,7 +41,11 @@ function submitTilesLive(cells) {
 		});
 	}
 
+	// Now we update the UI to make it seem like it's working.
 	showInvoiceBox("Processing...");
+	updateSatoshiCostDisplay();
+
+	// And actually send the message off.
 	sendMessageToServer("SubmitTiles", {updates: updates});
 }
 
