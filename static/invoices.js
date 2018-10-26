@@ -13,6 +13,11 @@ function handleInvoice(id, msg) {
 	//let ivs = document.getElementById("invoicelist");
 	//ivs.appendChild(iventry);
 
+	showInvoiceBox(msg);
+
+}
+
+function showInvoiceBox(msg) {
 	// Make the new invoice box visible.
 	let nibe = document.getElementById("newinvoicebox");
 	nibe.style.display = "block";
@@ -20,7 +25,6 @@ function handleInvoice(id, msg) {
 	// Set it to the newly-added invoice.
 	let nie = document.getElementById("newinvoice");
 	nie.innerHTML = msg;
-
 }
 
 function handleInvoicePaid(id) {
@@ -38,6 +42,12 @@ function handleInvoicePaid(id) {
 }
 
 function dismissNewInvoiceBox() {
+
+	// Hide the box.
 	let nib = document.getElementById("newinvoicebox");
 	nib.style.display = "none";
+
+	// Put a message in the invoice box "just in case" it shows up again.
+	let nie = document.getElementById("newinvoice");
+	nie.innerHTML = "(No invoice pending.  Dismiss this box.)";
 }

@@ -41,7 +41,8 @@ function submitTilesLive(cells) {
 		});
 	}
 
-	sendMessageToServer("SubmitTiles", {updates: updates})
+	showInvoiceBox("Processing...");
+	sendMessageToServer("SubmitTiles", {updates: updates});
 }
 
 function __submitGlider(x, y, color) {
