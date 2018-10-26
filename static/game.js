@@ -33,7 +33,7 @@ var WORLD_HEIGHT = WORLD_WIDTH;
 const DEFAULT_ZOOM = 10.0;
 const ZOOM_SPRINGYNESS = 3;
 
-const CAM_MOVE_SPEED = 50;
+const CAM_MOVE_SPEED = 500;
 const CAM_ZOOM_MULT = 1.05;
 
 var cameraState = null;
@@ -45,7 +45,11 @@ var gEditWindow = null;
 var gSocket = null;
 var msgHandlers = {}
 
+var mouse = null;
+var keys = {};
+
 var userColor = Math.floor(Math.random() * COLORS.length);
+var userDraw = []; // list of positions
 
 var debug = {
 	printTilesRendered: false
@@ -68,13 +72,28 @@ function init() {
 		zoom: DEFAULT_ZOOM
 	};
 
+	// Set up mouse.
+	mouse = {
+		x: WORLD_WIDTH / 2,
+		y: WORLD_HEIGHT / 2
+	};
+
 	// Set up game UI rendering.
 	worldCanvas = document.createElement("canvas"); // never used directly.
 	screenCanvas = document.createElement("canvas");
 
 	// Controls
 	// FIXME This acts as if the player is typing.  It's not a smooth flow.
+	//window.onkeydown = handleKeyDown;
 	window.onkeydown = handleKeyDown;
+	window.onkeyup = handleKeyUp;
+	let viewCanvas = document.getElementById("game");
+	viewCanvas.addEventListener("click", handleClick);
+	viewCanvas.addEventListener("mousemove", function(e) {
+		let br = viewCanvas.getBoundingClientRect();
+		mouse.x = e.clientX - br.x;
+		mouse.y = e.clientY - br.top;
+	});
 
 	// Start render procedures.
 	updateDisplay();
@@ -165,20 +184,15 @@ function handleSocketMessage(sock, e) {
 }
 
 function handleKeyDown(e) {
-	var k = e.key.toLowerCase();
-	if (k == 'a') {
-		cameraTarget.x -= CAM_MOVE_SPEED / cameraState.zoom;
-	} else if (k == 'd') {
-		cameraTarget.x += CAM_MOVE_SPEED / cameraState.zoom;
-	} else if (k == 'w') {
-		cameraTarget.y -= CAM_MOVE_SPEED / cameraState.zoom;
-	} else if (k == 's') {
-		cameraTarget.y += CAM_MOVE_SPEED / cameraState.zoom;
-	} else if (k == 'e') {
-		cameraTarget.zoom *= CAM_ZOOM_MULT;
-	} else if (k == 'r') {
-		cameraTarget.zoom /= CAM_ZOOM_MULT;
-	}
+	keys[e.key.toLowerCase()] = true;
+}
+
+function handleKeyUp(e) {
+	keys[e.key.toLowerCase()] = false;
+}
+
+function handleClick(e) {
+	console.log("clicked at: " + mouse.x + " " + mouse.y);
 }
 
 function getStartingWorldCells() {

@@ -1,6 +1,6 @@
 const RENDER_CULL_BUFFER = 3;
 
-var COLORS = [
+const COLORS = [
 	"#000000",
 	"#0000ff",
 	"#00ff00",
@@ -209,8 +209,33 @@ function runFrameUpdate(time) {
 	// Don't do any camera manipulation until we've got a stable FPS value.
 	if (frames > 2) {
 
+		// Apply movements.
+		if (keys["d"]) {
+			cameraTarget.x += (1.0 / dt) * CAM_MOVE_SPEED / cameraState.zoom;
+		}
+
+		if (keys["w"]) {
+			cameraTarget.y -= (1.0 / dt) * CAM_MOVE_SPEED / cameraState.zoom;
+		}
+
+		if (keys["a"]) {
+			cameraTarget.x -= (1.0 / dt) * CAM_MOVE_SPEED / cameraState.zoom;
+		}
+
+		if (keys["s"]) {
+			cameraTarget.y += (1.0 / dt) * CAM_MOVE_SPEED / cameraState.zoom;
+		}
+
+		if (keys["e"]) {
+			cameraTarget.zoom *= CAM_ZOOM_MULT;
+		}
+
+		if (keys["r"]) {
+			cameraTarget.zoom /= CAM_ZOOM_MULT;
+		}
+
 		// Calculate the new position of the camera.
-		var nextCam = {};
+		let nextCam = {};
 		for (var p in cameraTarget) {
 			nextCam[p] = lerp(cameraState[p], cameraTarget[p], (1.0 / fps) * ZOOM_SPRINGYNESS);
 		}
