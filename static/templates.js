@@ -1,5 +1,6 @@
 var currentTemplateName = "single";
 var templateFlip = false; // TODO
+var templateMirror = false;
 var templateRotate = 0; // TODO
 
 var userCurrentTemplate = [{x: 0, y: 0}]; // TODO More templates.
@@ -11,6 +12,11 @@ function setUserPenStyle(name) {
 
 function setUserPenFlip(flip) {
 	templateFlip = flip;
+	updateUserPen();
+}
+
+function setUserPenMirror(mir) {
+	templateMirror = mir;
 	updateUserPen();
 }
 
@@ -26,6 +32,9 @@ function updateUserPen() {
 		let tc = t[i];
 		if (templateFlip) {
 			tc = mirrorPointHoriz(tc);
+		}
+		if (templateMirror) {
+			tc = mirrorPointVert(tc);
 		}
 		for (let j = 0; j < templateRotate; j++) {
 			tc = rotatePointCcw(tc);
@@ -47,6 +56,13 @@ function mirrorPointHoriz(p) {
 		x: p.x,
 		y: p.y * -1
 	};
+}
+
+function mirrorPointVert(p) {
+	return {
+		x: p.x * -1,
+		y: p.y
+	}
 }
 
 var GLIDER_GUN_TEXT = "........................O.................................O.O.......................OO......OO............OO...........O...O....OO............OOOO........O.....O...OO..............OO........O...O.OO....O.O.....................O.....O.......O......................O...O................................OO......................";

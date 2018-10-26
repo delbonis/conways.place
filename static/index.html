@@ -60,11 +60,13 @@
 						<option value="single" selected="selected">Single</option>
 						<option value="glider">Glider</option>
 						<option value="rpent">R-Pentomino</option>
-						<option value="glidergun">Glider Gun</option>
+						<option value="glidergun">Gosper Glider Gun</option>
 					</select>
 					<br/>
 					Flip:
 					<input type="checkbox" name="templateflip" onchange="setUserPenFlip(this.checked);" autocomplete="off">
+					Mirror:
+					<input type="checkbox" name="templatemirror" onchange="setUserPenMirror(this.checked);" autocomplete="off">
 					Rotate:
 					<select name="templaterot" onchange="setUserPenRot(this.value);" autocomplete="off">
 						<option value="0">Flat</option>
