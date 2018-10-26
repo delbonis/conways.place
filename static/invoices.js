@@ -13,8 +13,11 @@ function handleInvoice(id, msg) {
 	//let ivs = document.getElementById("invoicelist");
 	//ivs.appendChild(iventry);
 
-	showInvoiceBox(msg);
+	// Move the user draw data into a separate thing, and reset it.
+	pendingDraws[id] = userDraw;
+	userDraw = [];
 
+	showInvoiceBox(msg);
 }
 
 function showInvoiceBox(msg) {
@@ -35,6 +38,7 @@ function handleInvoicePaid(id) {
 	console.log("invoice paid: " + id);
 
 	dismissNewInvoiceBox();
+	delete pendingDraws[id];
 
 	// Just remove it.
 	//let iv = document.getElementById("invoicelist-item-" + id);

@@ -1,3 +1,5 @@
+
+// This isn't used yet.  Will do when we implement culling properly.
 const RENDER_CULL_BUFFER = 3;
 
 const COLORS = [
@@ -10,6 +12,17 @@ const COLORS = [
 	"#ffff00",
 	"#666666"
 ];
+
+const COLORS_PENDING = [
+	"#777777",
+	"#aaaaff",
+	"#aaffaa",
+	"#aaffff",
+	"#ffaaaa",
+	"#ffaaff",
+	"#ffffaa",
+	"#cccccc"
+]
 
 var worldCanvas = null;
 var screenCanvas = null;
@@ -38,13 +51,22 @@ function renderCellsToContext(cells, ctx, minX, minY, maxX, maxY, offX, offY) {
 
 			// Don't render anything if not alive.  This might change.
 			if (!cell.live) {
+
+				// Actually, if we're zoomed in a lot, render a ruler mark.
+				// TODO Make this optional.
+				if (x % 5 == 0 && y % 5 == 0 && cameraState.zoom > 24) {
+					ctx.fillStyle = "#f0f0f0";
+					ctx.fillRect(x + offX, y + offY, 1, 1);
+				}
+
 				continue;
+
 			}
 
 			// Figure out the color, doing error checking.
 			let color = "#000000";
 			if (cell.data >= 0 && cell.data < COLORS.length) {
-				//color = COLORS[cell.data];
+				color = COLORS[cell.data];
 			}
 
 			// Then actually render.
@@ -69,6 +91,29 @@ function renderGameStateToContext(ctx) {
 	// Render the cells in the game, everything is on top of that.
 	// TODO Make it not render *everything* in the world.
 	renderCellsToContext(gWorldState, ctx, 0, 0, WORLD_WIDTH - 1, WORLD_HEIGHT - 1, 0, 0);
+
+	// Draw scratch cells.
+	ctx.imageSmoothingEnabled = false;
+	if (userDraw.length > 0) {
+		ctx.fillStyle = COLORS_PENDING[userColor];
+		for (let i = 0; i < userDraw.length; i++) {
+			let cell = userDraw[i];
+			ctx.fillRect(cell.x, cell.y, 1, 1);
+		}
+
+		// Now draw the cell under the cursor.
+		let wc = convertScreenSpaceToWorldSpace(mouse);
+		ctx.fillRect(Math.floor(wc.x), Math.floor(wc.y), 1, 1);
+	}
+
+	// Draw cells pending payment, super light color.
+	ctx.fillStyle = "#e0e0e0";
+	for (let d = 0; d < pendingDraws.length; d++) {
+		let pd = pendingDraws[d];
+		for (let i = 0; i < pd.length; i++) {
+			ctx.fillRect(pd[i].x, pd[i].y, 1, 1);
+		}
+	}
 
 	// Draw the edit window, if there is one.
 	if (gEditWindow != null) {
@@ -138,8 +183,8 @@ function updateScreenSpaceCanvas() {
 	 */
 
 	let zoom = cameraState.zoom;
-	let cellsHoriz = screenWidth / zoom + (RENDER_CULL_BUFFER * 2);
-	let cellsVert = screenHeight / zoom + (RENDER_CULL_BUFFER * 2);
+	let cellsHoriz = screenWidth / zoom;
+	let cellsVert = screenHeight / zoom;
 
 	let worldX = cameraState.x - (cellsHoriz / 2); // XXX
 	let worldY = cameraState.y - (cellsVert / 2); // XXX

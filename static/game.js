@@ -51,6 +51,8 @@ var keys = {};
 var userColor = Math.floor(Math.random() * COLORS.length);
 var userDraw = []; // list of positions
 
+var pendingDraws = {};
+
 var debug = {
 	printTilesRendered: false
 };
@@ -192,7 +194,10 @@ function handleKeyUp(e) {
 }
 
 function handleClick(e) {
-	console.log("clicked at: " + mouse.x + " " + mouse.y);
+	let wc = convertScreenSpaceToWorldSpace(mouse);
+
+	// We have to cast to 0 to make it actual cell coords.
+	tryAddCellToPending(Math.floor(wc.x), Math.floor(wc.y));
 }
 
 function getStartingWorldCells() {
@@ -215,5 +220,51 @@ function newBlankTile() {
 		live: false,
 		last_update: 0,
 		data: 0
+	}
+}
+
+function tryAddCellToPending(x, y) {
+
+	console.log("wanting to add " + x + " " + y + " to pending cells");
+
+	// First check to see if we already have it.
+	for (let i = 0; i < userDraw.length; i++) {
+		if (userDraw[i].x == x && userDraw[i].y == y) {
+			return;
+		}
+	}
+
+	console.log("adding...");
+
+	// If not, then actually add it.
+	userDraw.push({
+		x: x,
+		y: y
+	});
+}
+
+function submitPendingCells() {
+
+	// Construct the list of updates, with the full settings.
+	let updates = [];
+	for (let i = 0; i < userDraw.length; i++) {
+		let c = userDraw[i];
+		updates.push({
+			x: c.x,
+			y: c.y,
+			live: true, // TODO Make a way to remove cells.
+			data: userColor
+		})
+	}
+
+	// Now we preemptively open the invoice box, and then send the request off.
+	showInvoiceBox("Processing...")
+	sendMessageToServer("SubmitTiles", {updates: updates});
+}
+
+function convertScreenSpaceToWorldSpace(pos) {
+	return {
+		x: ((pos.x - lastCanvasWidth / 2) / cameraState.zoom) + cameraState.x,
+		y: ((pos.y - lastCanvasHeight / 2) / cameraState.zoom) + cameraState.y
 	}
 }

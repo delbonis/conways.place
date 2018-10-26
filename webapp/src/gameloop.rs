@@ -22,17 +22,7 @@ pub struct GameState {
 
 impl GameState {
     pub fn new(mut w: world::World) -> GameState {
-        let pos = vec![
-            (100, 100),
-            (85, 85),
-            (50, 50),
-            (50, 150),
-            (150, 50),
-            (150, 150),
-        ];
-        for p in pos {
-            make_rpentomino(p, &mut w);
-        }
+        make_rpentomino((64, 64), &mut w);
         GameState {
             sessions: HashMap::new(),
             world: Arc::new(w),
