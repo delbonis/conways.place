@@ -50,6 +50,7 @@ var keys = {};
 
 var userColor = Math.floor(Math.random() * COLORS.length);
 var userDraw = []; // list of positions
+var userCurrentTemplate = [{x: 0, y: 0}]; // TODO More templates.
 
 var pendingDraws = {};
 
@@ -195,9 +196,17 @@ function handleKeyUp(e) {
 
 function handleClick(e) {
 	let wc = convertScreenSpaceToWorldSpace(mouse);
+	let mx = Math.floor(wc.x);
+	let my = Math.floor(wc.y);
 
-	// We have to cast to 0 to make it actual cell coords.
-	tryAddCellToPending(Math.floor(wc.x), Math.floor(wc.y));
+	if (keys["shift"]) {
+		removeCellFromPending(mx, my);
+	} else {
+		for (let i = 0; i < userCurrentTemplate.length; i++) {
+			tryAddCellToPending(mx + userCurrentTemplate[i].x, my + userCurrentTemplate[i].y);
+		}
+	}
+
 }
 
 function getStartingWorldCells() {
@@ -241,6 +250,19 @@ function tryAddCellToPending(x, y) {
 		x: x,
 		y: y
 	});
+}
+
+function removeCellFromPending(x, y) {
+
+	for (let i = 0; i < userDraw.length; i++) {
+		if (userDraw[i].x == x && userDraw[i].y == y) {
+			userDraw.splice(i, 1);
+			return true;
+		}
+	}
+
+	return false;
+
 }
 
 function submitPendingCells() {

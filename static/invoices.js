@@ -1,5 +1,5 @@
 
-var invoices = {}
+var invoices = {};
 
 function handleInvoice(id, msg) {
 	invoices[id] = msg;
@@ -16,6 +16,8 @@ function handleInvoice(id, msg) {
 	// Move the user draw data into a separate thing, and reset it.
 	pendingDraws[id] = userDraw;
 	userDraw = [];
+
+	console.log(pendingDraws);
 
 	showInvoiceBox(msg);
 }

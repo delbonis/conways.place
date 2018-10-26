@@ -88,30 +88,44 @@ function renderCellsToContext(cells, ctx, minX, minY, maxX, maxY, offX, offY) {
 
 function renderGameStateToContext(ctx) {
 
+	// First, draw the mouse position, in case we need it.
+	let worldMouse = convertScreenSpaceToWorldSpace(mouse);
+	worldMouse.x = Math.floor(worldMouse.x);
+	worldMouse.y = Math.floor(worldMouse.y);
+
 	// Render the cells in the game, everything is on top of that.
 	// TODO Make it not render *everything* in the world.
 	renderCellsToContext(gWorldState, ctx, 0, 0, WORLD_WIDTH - 1, WORLD_HEIGHT - 1, 0, 0);
 
-	// Draw scratch cells.
+	// Now draw the cell(s) at the cursor.
 	ctx.imageSmoothingEnabled = false;
+	ctx.fillStyle = COLORS_PENDING[userColor];
+	if (keys["shift"]) {
+		ctx.fillRect(worldMouse.x, worldMouse.y, 1, 1);
+	} else {
+		for (let i = 0; i < userCurrentTemplate.length; i++) {
+			let tc = userCurrentTemplate[i];
+			ctx.fillRect(worldMouse.x + tc.x, worldMouse.y + tc.y, 1, 1);
+		}
+	}
+
+	// Draw scratch cells, if there are any.
 	if (userDraw.length > 0) {
-		ctx.fillStyle = COLORS_PENDING[userColor];
 		for (let i = 0; i < userDraw.length; i++) {
 			let cell = userDraw[i];
 			ctx.fillRect(cell.x, cell.y, 1, 1);
 		}
 
-		// Now draw the cell under the cursor.
-		let wc = convertScreenSpaceToWorldSpace(mouse);
-		ctx.fillRect(Math.floor(wc.x), Math.floor(wc.y), 1, 1);
 	}
 
-	// Draw cells pending payment, super light color.
+	// Draw cells pending payment, pretty light color.
+	// There's a simpler way to do this but for some reason it doesn't like me.
 	ctx.fillStyle = "#e0e0e0";
-	for (let d = 0; d < pendingDraws.length; d++) {
-		let pd = pendingDraws[d];
-		for (let i = 0; i < pd.length; i++) {
-			ctx.fillRect(pd[i].x, pd[i].y, 1, 1);
+	let pkeys = Object.keys(pendingDraws);
+	for (let i = 0; i < pkeys.length; i++) {
+		let pd = pendingDraws[pkeys[i]];
+		for (let j = 0; j < pd.length; j++) {
+			ctx.fillRect(pd[j].x, pd[j].y, 1, 1);
 		}
 	}
 
