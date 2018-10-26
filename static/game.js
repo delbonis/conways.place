@@ -45,7 +45,7 @@ const COLORS = [
 	"#ff0000",
 	"#ff00ff",
 	"#ffff00",
-	"#ffffff"
+	"#666666"
 ];
 
 var cameraState = null;
@@ -57,9 +57,11 @@ var gEditWindow = null;
 var gSocket = null;
 var msgHandlers = {}
 
+var userColor = Math.floor(Math.random() * COLORS.length);
+
 var debug = {
 	printTilesRendered: false
-}
+};
 
 function init() {
 
@@ -288,10 +290,23 @@ function getNewFrame(worldState, cam, windowWidth, windowHeight) {
 
 }
 
+var lastCanvasWidth = -1;
+var lastCanvasHeight = -1;
+
 function updateDisplay() {
 
 	let out = document.getElementById("game");
 	let frame = getNewFrame(gWorldState, cameraState, out.width, out.height);
+
+	// Cache these since it avoids potentially updating the DOM layout if we don't have to.
+	let dw = document.body.clientWidth;
+	let dh = document.body.clientHeight;
+	if (dw != lastCanvasWidth || dh != lastCanvasHeight) {
+		out.width = dw;
+		out.height = dh;
+		lastCanvasWidth = dw;
+		lastCanvasHeight = dh;
+	}
 
 	let ctx = out.getContext("2d");
 	ctx.imageSmoothingEnabled = false;

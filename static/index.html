@@ -25,6 +25,7 @@
 		<link href="style.css" type="text/css" rel="stylesheet" />
 		<script src="game.js"></script>
 		<script src="messages.js"></script>
+		<script src="invoices.js"></script>
 	</head>
 	<body onload="init();">
 		<div class="content">
@@ -32,6 +33,51 @@
 				<canvas class="game" id="game">
 					<!-- idk what goes in here lol -->
 				</canvas>
+			</div>
+		</div>
+		<!--<div id="ivctr" style="visibility: hidden;">
+			<p>
+				Invoices:
+			</p>
+			<ul id="invoicelist">
+			</ul>
+		</div>-->
+		<div id="overlay">
+			<div id="heading">
+				<h1>conways.place</h1>
+				Play Conway's Game of Life cooperatively using Lightning!
+			</div>
+
+			<div id="infocol">
+				<div id="colorbox" class="panel">
+					<h3>Colors</h3>
+					<table>
+						<tbody>
+							<tr>
+								<td class="colorbutton" onclick="userColor = 0;" style="background: #000000"></td>
+								<td class="colorbutton" onclick="userColor = 7;" style="background: #666666"></td>
+								<td class="colorbutton" onclick="userColor = 4;" style="background: #ff0000"></td>
+								<td class="colorbutton" onclick="userColor = 2;" style="background: #00ff00"></td>
+								<td class="colorbutton" onclick="userColor = 1;" style="background: #0000ff"></td>
+								<td class="colorbutton" onclick="userColor = 6;" style="background: #ffff00"></td>
+								<td class="colorbutton" onclick="userColor = 5;" style="background: #ff00ff"></td>
+								<td class="colorbutton" onclick="userColor = 4;" style="background: #00ffff"></td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+
+				<div id="newinvoicebox" class="panel" style="display: none;">
+					<h3>Submission</h3>
+					<p>
+						You've submitted some cells, but in order for them to be visible
+						to everyone, you need to pay this BOLT 11 invoice.
+					</p>
+					<div class="invoice" id="newinvoice">
+					</div>
+					<hr/>
+					<button onclick="dismissNewInvoiceBox();">Dismiss</button>
+				</div>
 			</div>
 		</div>
 	</body>

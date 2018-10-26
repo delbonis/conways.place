@@ -53,23 +53,3 @@ function __submitGlider(x, y, color) {
 		x + 2, y + 2, true, color
 	]);
 }
-
-var invoices = {}
-
-function handleInvoice(id, msg) {
-	invoices[id] = msg;
-	console.log("new invoice: " + invoices[id]);
-	announceInvoice(id);
-}
-
-// TODO Make this not look like shit.
-function announceInvoice(id) {
-	alert("Invoice: " + id + "\n\nPlease pay this BOLT 11 invoice\n================\n" + invoices[id]);
-}
-
-function handleInvoicePaid(id) {
-	alert("Invoice " + id + " paid!");
-	if (invoices[id] != null && invoices[id] != undefined) {
-		delete invoices[id];
-	}
-}

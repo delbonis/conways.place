@@ -19,22 +19,77 @@
 html, body {
 	height: 100%;
 	margin: 0;
-}
+	font-family: sans-serif;
 
-div.content {
-	margin: 5px;
-	border: 2px solid black;
+	overflow: hidden;
 }
 
 #gamecontainer {
 	margin: 0px;
 	border: 0px;
 	padding: 0px;
-	height: 480px;
 }
 
-.game {
+#game {
 	margin: 0px;
 	border: 0px;
 	padding: 0px;
+}
+
+#overlay {
+	position: absolute;
+	top: 0px;
+	left: 0px;
+
+	z-index: 5; // should be above everything else
+}
+
+#heading {
+	width: 100vw;
+
+	margin: 0;
+	border-bottom: 1px solid black;
+
+	padding: 4px;
+
+	background-color: white;
+}
+
+.panel {
+	margin: 5px;
+	border: 1px solid black;
+	border-radius: 3px;
+	padding: 4px;
+
+	background: #ddd;
+}
+
+#infocol {
+	max-width: 400px;
+}
+
+.invoice {
+	margin: 0.5em;
+
+	font-family: monospace;
+	word-break: break-all;
+}
+
+.button {
+	background-color: #ccc;
+}
+
+#colorbox {
+	padding: 4px;
+}
+
+.colorbutton {
+	width: 2em;
+	height: 2em;
+	border: 1px solid black;
+	border-radius: 8px;
+}
+
+.colorbutton:hover !important {
+	opacity: 10%;
 }
