@@ -87,7 +87,6 @@ function init() {
 
 	// Controls
 	// FIXME This acts as if the player is typing.  It's not a smooth flow.
-	//window.onkeydown = handleKeyDown;
 	window.onkeydown = handleKeyDown;
 	window.onkeyup = handleKeyUp;
 	let viewCanvas = document.getElementById("game");
