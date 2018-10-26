@@ -33,7 +33,7 @@ var WORLD_HEIGHT = WORLD_WIDTH;
 const DEFAULT_ZOOM = 10.0;
 const ZOOM_SPRINGYNESS = 3;
 
-const CAM_MOVE_SPEED = 500;
+const CAM_MOVE_SPEED = 250;
 const CAM_ZOOM_MULT = 1.05;
 
 var cameraState = null;

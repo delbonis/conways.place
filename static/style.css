@@ -41,7 +41,12 @@ html, body {
 	top: 0px;
 	left: 0px;
 
-	z-index: 5; // should be above everything else
+	z-index: 5;
+	pointer-events: none;
+}
+
+#overlay * {
+	pointer-events: auto;
 }
 
 #heading {
