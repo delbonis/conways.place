@@ -12,6 +12,12 @@ pub struct Tile {
     pub data: u32
 }
 
+impl PartialEq for Tile {
+    fn eq(&self, other: &Self) -> bool {
+        self.live == other.live && self.data == other.data
+    }
+}
+
 impl Tile {
     pub fn new_empty() -> Tile {
         Tile {
@@ -134,6 +140,14 @@ impl World {
 
     }
 
+    pub fn cells(&self) -> &Vec<Tile> {
+        &self.cells
+    }
+
+    pub fn dims(&self) -> (usize, usize) {
+        self.dimensions
+    }
+
 }
 
 #[inline]
@@ -162,7 +176,7 @@ fn cartesean_to_index((w, h): (usize, usize), (x, y): (usize, usize)) -> Option<
 }
 
 #[inline]
-fn index_to_cartesean((w, h): (usize, usize), i: usize) -> Option<(usize, usize)> {
+pub fn index_to_cartesean((w, h): (usize, usize), i: usize) -> Option<(usize, usize)> {
     if i >= w * h {
         None
     } else {

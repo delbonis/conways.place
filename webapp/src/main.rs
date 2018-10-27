@@ -135,7 +135,7 @@ fn main() {
 			let f = upgrade
 				.use_protocol(PROTO_NAME)
 				.accept()
-				.and_then(move |(s, _)| s.send(Message::text("Hello!").into())) // this doesn't compile if I remove it
+				.and_then(move |(s, _)| s.send(OwnedMessage::Text("Hello!".into()).into())) // this doesn't compile if I remove it
 				.and_then(move |s| {
 					let (sink, stream) = s.split();
 					stream

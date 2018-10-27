@@ -12,7 +12,7 @@ pub enum NetMessage {
     Alert(String),
     Log(String),
     NewWorldState(NewWorldStateMessage),
-    UpdateCells(UpdateCellsMessage),
+    UpdateCells(Vec<UpdateCellMessage>),
     RequestEditWindow,
     UpdateEditWindow(Option<gameloop::EditWindow>),
     SubmitTiles(SubmitTilesMessage),
@@ -50,9 +50,9 @@ pub struct NewWorldStateMessage {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct UpdateCellsMessage {
-    pos: (usize, usize),
-    state: world::Tile
+pub struct UpdateCellMessage {
+    pub pos: (usize, usize),
+    pub state: world::Tile
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

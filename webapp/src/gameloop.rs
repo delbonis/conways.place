@@ -58,28 +58,51 @@ pub fn game_sim_thread(st: Arc<Mutex<GameState>>) {
 
     loop {
 
-        // Get the current world state.
+        // Figure out the next world state.
+        let prev;
+        let current;
+        let sessions;
         {
             let mut state = st.lock().unwrap();
-            let prev_step = state.world.as_ref().clone();
+            prev = state.world.as_ref().clone();
 
             // Compute the next step.
-            let next_step = Arc::new(prev_step.step());
+            let next_step = Arc::new(prev.step());
             //println!("{}", next_step); // TODO Report this somewhere else.
 
             // Update.
             state.world = next_step.clone(); // should move this clone outside the lock region?
+            current = state.world.clone();
 
-            // Send the new state to all the player sessions.
-            // TODO Make diffs instead of just sending the whole world to players.
-            // TODO Move this somewhere else.  Should we put an Arc or Rc around worlds?
-            for s in state.sessions.iter() { // idk why I have to .iter() this
-                s.1.queue_message(messages::NetMessage::new_world_state_message(next_step.clone()))
-            }
+            // Cache these for the next step.
+            sessions = state.sessions.clone();
         };
 
+        // This looks scary, but basically just makes a vec of all the cell changes across states.
+        let diffs = prev.cells().iter()
+            .enumerate()
+            .zip(current.cells().iter())
+            .map(|((i, p), c)| (i, p, c))
+            .filter_map(|(i, p, c)| if *p != *c {
+                Some((i, c))
+            } else {
+                None
+            })
+            .map(|(i, c)| (world::index_to_cartesean(current.dims(), i).unwrap(), c))
+            .map(|(pos, c)| messages::UpdateCellMessage {
+                pos: pos,
+                state: *c
+            })
+            .collect();
+
+        // Send the state updates to all the player sessions.
+        let msg = messages::NetMessage::UpdateCells(diffs);
+        for s in sessions.iter() { // idk why I have to .iter() this
+            s.1.queue_message(msg.clone());
+        }
+
         // Sleep for a second.
-        // TODO Make it so it sleeps until a second has passed *since the last sleep finished*.
+        // TODO Make it so it sleeps until 250ms has passed *since the last sleep finished*.
         thread::sleep(time::Duration::from_millis(250));
 
     }
