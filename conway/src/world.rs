@@ -148,7 +148,7 @@ fn compute_tile_next_step(adjacents: Vec<&Tile>, subject: &Tile, tick_for: u64) 
             } else {
                 adjacents[tick_for as usize % adjacents.len()].data // if it's becomming alive, then pick a new one
             }
-        } else { 0 }
+        } else { subject.data }
     }
 }
 

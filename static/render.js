@@ -24,6 +24,17 @@ const COLORS_PENDING = [
 	"#cccccc"
 ]
 
+const COLORS_TERRITORY = [
+	"#ffffff", // ehhh?
+	"#ddddff",
+	"#ddffdd",
+	"#ddffff",
+	"#ffdddd",
+	"#ffddff",
+	"#ffffdd",
+	"#e7e7e7"
+]
+
 var worldCanvas = null;
 var screenCanvas = null;
 
@@ -51,6 +62,11 @@ function renderCellsToContext(cells, ctx, minX, minY, maxX, maxY, offX, offY) {
 
 			// Don't render anything if not alive.  This might change.
 			if (!cell.live) {
+
+				if (cell.data != 0) {
+					ctx.fillStyle = COLORS_TERRITORY[cell.data];
+					ctx.fillRect(x + offX, y + offY, 1, 1);
+				}
 
 				// Actually, if we're zoomed in a lot, render a ruler mark.
 				// TODO Make this optional.
