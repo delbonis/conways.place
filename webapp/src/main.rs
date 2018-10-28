@@ -126,16 +126,18 @@ fn main() {
             let irs2 = ir_send.clone();
 
             // Add the session to the table.
+            let current_world; // make a copy of the world state so we can send it to the player
             {
                 let mut gs: MutexGuard<gameloop::GameState> = wref.lock().unwrap();
                 gs.sessions.insert(sid, session);
+                current_world = gs.world.clone();
             }
 
 			// accept the request to be a ws connection if it does
 			let f = upgrade
 				.use_protocol(PROTO_NAME)
 				.accept()
-				.and_then(move |(s, _)| s.send(OwnedMessage::Text("Hello!".into()).into())) // this doesn't compile if I remove it
+				.and_then(move |(s, _)| s.send(OwnedMessage::Text(messages::NetMessage::new_world_state_message(current_world).to_string()).into())) // this doesn't compile if I remove it
 				.and_then(move |s| {
 					let (sink, stream) = s.split();
 					stream
